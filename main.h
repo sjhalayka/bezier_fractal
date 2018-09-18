@@ -1,4 +1,4 @@
-// Shawn Halayka -- shalayka@gmail.com
+// Shawn Halayka -- sjhalayka@gmail.com
 // Sep 17, 2018
 //
 // This code and data is in the public domain.
@@ -732,6 +732,7 @@ void draw_objects(bool disable_colouring)
 
 			static const float rad_to_deg = 180.0f / pi;
 
+			// cylinder orientation code from JYK on gamedev.net
 			vector_3 line = pos[i][j + 1] - pos[i][j];
 			
 			glPushMatrix();
