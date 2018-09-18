@@ -73,7 +73,7 @@ vector<vector<vector_3> > all_points;
 vector<vector<vector_3> > pos;
 
 
-// https://stackoverflow.com/questions/785097/how-do-i-implement-a-bézier-curve-in-c
+// https://stackoverflow.com/questions/785097/how-do-i-implement-a-bÃ©zier-curve-in-c
 vector_3 getBezierPoint(vector<vector_3> points, float t)
 {
 	int i = points.size() - 1;
@@ -553,12 +553,13 @@ void passive_motion_func(int x, int y)
 }
 
 
-
+// I found this code in the early 2000s
 class RGB
 {
 public:
 	unsigned char r, g, b;
 };
+
 
 RGB HSBtoRGB(unsigned short int hue_degree, unsigned char sat_percent, unsigned char bri_percent)
 {
