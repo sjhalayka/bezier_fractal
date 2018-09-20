@@ -1,3 +1,5 @@
+// Source code by Shawn Halayka
+// Source code is in the public domain
 
 #ifndef custom_math_h
 #define custom_math_h
