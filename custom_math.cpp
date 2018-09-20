@@ -1,8 +1,3 @@
-// Shawn Halayka -- shalayka@gmail.com
-// June 26, 2010
-//
-// This code and data is in the public domain.
-
 
 #include "custom_math.h"
 
