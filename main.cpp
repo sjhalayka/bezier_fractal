@@ -1,12 +1,3 @@
-// Shawn Halayka -- shalayka@gmail.com
-// June 26, 2010
-//
-// This code and data is in the public domain.
-
-// This code uses the OpenGL 1.1 and GLUT APIs.
-// - For *nix: use the system package manager to install them, if need be.
-// - For Windows: use Nate Robins' GLUT implementation, or freeglut, or OpenGLUT, etc.
-
 
 #include "main.h"
 
