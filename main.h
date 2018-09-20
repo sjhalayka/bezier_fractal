@@ -736,7 +736,7 @@ void draw_objects(bool disable_colouring)
 			glPushMatrix();
 			glTranslatef(pos[i][j].x, pos[i][j].y, pos[i][j].z);
 
-			float line_len = line.length();
+			const float line_len = line.length();
 			line.normalize();
 			
 			float yaw = 0.0f;
