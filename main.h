@@ -1,3 +1,5 @@
+// Source code by Shawn Halayka (unless otherwise noted)
+// Source code is in the public domain
 
 
 
