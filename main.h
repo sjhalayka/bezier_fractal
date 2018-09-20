@@ -689,7 +689,6 @@ RGB HSBtoRGB(unsigned short int hue_degree, unsigned char sat_percent, unsigned 
 
 
 
-// This render mode won't apply to a curved 3D space.
 void draw_objects(bool disable_colouring)
 {
 	if(false == disable_colouring)
