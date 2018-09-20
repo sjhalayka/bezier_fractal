@@ -746,7 +746,7 @@ void draw_objects(bool disable_colouring)
 			else
 				yaw = atan2f(line.x, line.z);
 
-			float pitch = -atan2f(line.y, sqrt(line.x*line.x + line.z*line.z));
+			float pitch = -atan2f(line.y, sqrtf(line.x*line.x + line.z*line.z));
 
 			glRotatef(yaw*rad_to_deg, 0.0f, 1.0f, 0.0f);
 			glRotatef(pitch*rad_to_deg, 1.0f, 0.0f, 0.0f);
