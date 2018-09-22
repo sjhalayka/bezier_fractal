@@ -1,6 +1,6 @@
 Shawn Halayka -- sjhalayka@gmail.com
 
-This code and data is in the public domain.
+This code and data are in the public domain.
 
 See accompanying paper:
 
