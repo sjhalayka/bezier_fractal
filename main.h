@@ -136,7 +136,7 @@ void get_points(size_t res)
 
 	string error_string;
 	quaternion_julia_set_equation_parser eqparser;
-	if (false == eqparser.setup("Z = Z^5 + C", error_string, C))
+	if (false == eqparser.setup("Z = sin(Z) + C*sin(Z)", error_string, C))
 	{
 		cout << "Equation error: " << error_string << endl;
 		return;
@@ -188,18 +188,25 @@ void get_points(size_t res)
 		}
 	}
 
-	for (size_t i = 0; i < all_4d_points.size(); i++)
-	{
-		vector<vector_4> p;
 
-		for (float t = 0; t <= 1.0; t += 0.01)
-		{
-			vector_4 v = getBezierPoint(all_4d_points[i], t);
-			p.push_back(v);
-		}
 
-		pos.push_back(p);
-	}
+
+	//for (size_t i = 0; i < all_4d_points.size(); i++)
+	//{
+	//	vector<vector_4> p;
+
+	//	for (float t = 0; t <= 1.0; t += 0.01)
+	//	{
+	//		vector_4 v = getBezierPoint(all_4d_points[i], t);
+	//		p.push_back(v);
+	//	}
+
+	//	pos.push_back(p);
+	//}
+
+	pos = all_4d_points;
+
+
 
 
 	for (size_t i = 0; i < pos.size(); i++)
@@ -224,24 +231,8 @@ void get_points(size_t res)
 		dist_by_len.push_back(total_distances[i] / total_lengths[i]);
 
 
-	total_lengths = total_distances;// dist_by_len;
-
-
-
-	//float min_length = 1e100;
-
-	//for (size_t i = 0; i < total_lengths.size(); i++)
-	//{
-	//	if (total_lengths[i] < min_length)
-	//		min_length = total_lengths[i];
-	//}
-
-	//for (size_t i = 0; i < total_lengths.size(); i++)
-	//{
-	//	total_lengths[i] -= min_length;
-	//}
-
-
+	//total_lengths = total_distances;
+	//total_lengths = dist_by_len;
 
 
 
@@ -289,8 +280,8 @@ void get_points(size_t res)
 			Scalar(0, 0, 0), 1, 8, 0);
 	}
 
-//	imshow("calcHist Demo", histImage);
-//	waitKey();
+	imshow("calcHist Demo", histImage);
+	waitKey();
 }
 
 
