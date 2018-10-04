@@ -1,8 +1,3 @@
-// Source code by Shawn Halayka
-// Source code is in the public domain
-
-
-
 #include <cmath>
 #include "custom_math.h"
 using namespace custom_math;

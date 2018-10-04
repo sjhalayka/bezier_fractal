@@ -1,5 +1,8 @@
-// Source code by Shawn Halayka
-// Source code is in the public domain
+// Shawn Halayka -- shalayka@gmail.com
+// June 26, 2010
+//
+// This code and data is in the public domain.
+
 
 #ifndef custom_math_h
 #define custom_math_h

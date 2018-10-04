@@ -1,6 +1,7 @@
-// Source code by Shawn Halayka (unless otherwise noted)
-// Source code is in the public domain
-
+// Shawn Halayka -- shalayka@gmail.com
+// June 26, 2010
+//
+// This code and data is in the public domain.
 
 
 #ifndef main_H
@@ -21,6 +22,9 @@ using std::ios;
 #include <sstream>
 using namespace std;
 
+#include <opencv2/opencv.hpp>
+using namespace cv;
+#pragma comment(lib, "opencv_world340.lib")
 
 
 vector_3 background_colour(1.0, 1.0, 1.0);
@@ -68,12 +72,17 @@ void draw_objects(bool disable_colouring = false);
 
 
 
-vector<vector<vector_3> > all_points;
-vector<vector<vector_3> > pos;
+vector<vector<vector_4> > all_4d_points;
+vector<vector<vector_4> > pos;
+
+vector<float> total_lengths;
+vector<float> total_distances;
+vector<float> dist_by_len;
 
 
-// https://stackoverflow.com/questions/785097/how-do-i-implement-a-bÃ©zier-curve-in-c
-vector_3 getBezierPoint(vector<vector_3> points, float t)
+
+// https://stackoverflow.com/questions/785097/how-do-i-implement-a-bézier-curve-in-c
+vector_4 getBezierPoint(vector<vector_4> points, float t)
 {
 	int i = points.size() - 1;
 
@@ -81,9 +90,10 @@ vector_3 getBezierPoint(vector<vector_3> points, float t)
 	{
 		for (int k = 0; k < i; k++)
 		{
-			points[k].x = points[k].x + t * (points[k + 1].x - points[k].x);
-			points[k].y = points[k].y + t * (points[k + 1].y - points[k].y);
-			points[k].z = points[k].z + t * (points[k + 1].z - points[k].z);
+			points[k].x += t * (points[k + 1].x - points[k].x);
+			points[k].y += t * (points[k + 1].y - points[k].y);
+			points[k].z += t * (points[k + 1].z - points[k].z);
+			points[k].w += t * (points[k + 1].w - points[k].w);
 		}
 
 		i--;
@@ -96,8 +106,12 @@ vector_3 getBezierPoint(vector<vector_3> points, float t)
 
 void get_points(size_t res)
 {
-	all_points.clear();
+	all_4d_points.clear();
 	pos.clear();
+
+	total_lengths.clear();
+	total_distances.clear();
+	dist_by_len.clear();
 
 	float x_grid_max = 1.5;
 	float y_grid_max = 1.5;
@@ -122,7 +136,7 @@ void get_points(size_t res)
 
 	string error_string;
 	quaternion_julia_set_equation_parser eqparser;
-	if (false == eqparser.setup("Z = Z^2 + C", error_string, C))
+	if (false == eqparser.setup("Z = Z^5 + C", error_string, C))
 	{
 		cout << "Equation error: " << error_string << endl;
 		return;
@@ -142,12 +156,12 @@ void get_points(size_t res)
 
 		for (size_t y = 0; y < y_res; y++, Z.y += y_step_size)
 		{
-			vector<vector_3> points;
+			vector<vector_4> points;
 
 			float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
 			if (length < threshold)
-				all_points.push_back(points);
+				all_4d_points.push_back(points);
 		}
 	}
 
@@ -164,35 +178,126 @@ void get_points(size_t res)
 
 			for (size_t y = 0; y < y_res; y++, Z.y += y_step_size)
 			{
-				vector<vector_3> points;
+				vector<vector_4> points;
 
 				float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
 				if (length < threshold)
-					all_points.push_back(points);
+					all_4d_points.push_back(points);
 			}
 		}
 	}
 
-	for (size_t i = 0; i < all_points.size(); i++)
+	for (size_t i = 0; i < all_4d_points.size(); i++)
 	{
-		vector<vector_3> p;
+		vector<vector_4> p;
 
-		for (float t = 0; t <= 0.2; t += 0.001)
+		for (float t = 0; t <= 1.0; t += 0.01)
 		{
-			vector_3 v = getBezierPoint(all_points[i], t);
+			vector_4 v = getBezierPoint(all_4d_points[i], t);
 			p.push_back(v);
 		}
 
 		pos.push_back(p);
 	}
+
+
+	for (size_t i = 0; i < pos.size(); i++)
+	{
+		float total_len = 0;
+
+		for (size_t j = 0; j < pos[i].size() - 1; j++)
+		{
+			vector_4 line = pos[i][j + 1] - pos[i][j];
+
+			float line_len = line.length();		
+			total_len += line_len;
+		}
+
+		total_lengths.push_back(total_len);
+
+		float distance = (pos[pos.size() - 1][0] - pos[i][0]).length();
+		total_distances.push_back(distance);
+	}
+
+	for (size_t i = 0; i < total_lengths.size(); i++)
+		dist_by_len.push_back(total_distances[i] / total_lengths[i]);
+
+
+	total_lengths = total_distances;// dist_by_len;
+
+
+
+	//float min_length = 1e100;
+
+	//for (size_t i = 0; i < total_lengths.size(); i++)
+	//{
+	//	if (total_lengths[i] < min_length)
+	//		min_length = total_lengths[i];
+	//}
+
+	//for (size_t i = 0; i < total_lengths.size(); i++)
+	//{
+	//	total_lengths[i] -= min_length;
+	//}
+
+
+
+
+
+	float max_length = 0;
+
+	for (size_t i = 0; i < total_lengths.size(); i++)
+	{
+		if (total_lengths[i] > max_length)
+			max_length = total_lengths[i];
+	}
+
+	for (size_t i = 0; i < total_lengths.size(); i++)
+	{
+		total_lengths[i] /= max_length;
+		total_lengths[i] *= 255.0f;
+		total_lengths[i] = floorf(total_lengths[i]);
+	}	
+
+	Mat data(1, total_lengths.size(), CV_8UC1, Scalar(0));
+
+	for (size_t i = 0; i < total_lengths.size(); i++)
+	{
+		data.at<unsigned char>(0, i) = static_cast<unsigned char>(total_lengths[i]);
+	}
+
+
+
+
+	int histSize = 256;
+	float range[] = { 0, 256 }; //the upper boundary is exclusive
+	const float* histRange = { range };
+	bool uniform = true, accumulate = false;
+	Mat hist;
+	calcHist(&data, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
+
+	int hist_w = 512, hist_h = 400;
+	int bin_w = cvRound((double)hist_w / histSize);
+	Mat histImage(hist_h, hist_w, CV_8UC3, Scalar(255, 255, 255));
+	normalize(hist, hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
+
+	for (int i = 1; i < histSize; i++)
+	{
+		line(histImage, Point(bin_w*(i - 1), hist_h - cvRound(hist.at<float>(i - 1))),
+			Point(bin_w*(i), hist_h - cvRound(hist.at<float>(i))),
+			Scalar(0, 0, 0), 1, 8, 0);
+	}
+
+//	imshow("calcHist Demo", histImage);
+//	waitKey();
 }
 
 
 // TODO: fix camera bug where portrait mode crashes.
 void take_screenshot(size_t num_cams_wide, const char *filename, const bool reverse_rows = false)
 {
-	get_points(50);
+	get_points(150);
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -552,13 +657,12 @@ void passive_motion_func(int x, int y)
 }
 
 
-// I found this code in the early 2000s
+
 class RGB
 {
 public:
 	unsigned char r, g, b;
 };
-
 
 RGB HSBtoRGB(unsigned short int hue_degree, unsigned char sat_percent, unsigned char bri_percent)
 {
@@ -689,6 +793,7 @@ RGB HSBtoRGB(unsigned short int hue_degree, unsigned char sat_percent, unsigned 
 
 
 
+// This render mode won't apply to a curved 3D space.
 void draw_objects(bool disable_colouring)
 {
 	if(false == disable_colouring)
@@ -730,13 +835,12 @@ void draw_objects(bool disable_colouring)
 
 			static const float rad_to_deg = 180.0f / pi;
 
-			// cylinder orientation code from JYK on gamedev.net
-			vector_3 line = pos[i][j + 1] - pos[i][j];
+			vector_4 line = pos[i][j + 1] - pos[i][j];
 			
 			glPushMatrix();
 			glTranslatef(pos[i][j].x, pos[i][j].y, pos[i][j].z);
 
-			const float line_len = line.length();
+			float line_len = line.length();
 			line.normalize();
 			
 			float yaw = 0.0f;
@@ -746,12 +850,17 @@ void draw_objects(bool disable_colouring)
 			else
 				yaw = atan2f(line.x, line.z);
 
-			float pitch = -atan2f(line.y, sqrtf(line.x*line.x + line.z*line.z));
+			float pitch = -atan2f(line.y, sqrt(line.x*line.x + line.z*line.z));
 
 			glRotatef(yaw*rad_to_deg, 0.0f, 1.0f, 0.0f);
 			glRotatef(pitch*rad_to_deg, 1.0f, 0.0f, 0.0f);
 
 			gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
+
+			if (j == 0)
+			{
+				gluSphere(glu_obj, 0.005, 10, 10);
+			}
 
 			glPopMatrix();
 		}

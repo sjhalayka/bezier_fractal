@@ -16,14 +16,15 @@ void quaternion_julia_set_equation_parser::cleanup(void)
 }
 
 // don't need c, because it's passed in through setup
-float quaternion_julia_set_equation_parser::iterate(vector<vector_3> &points, const quaternion &src_Z, const short unsigned int &max_iterations, const float &threshold)
+float quaternion_julia_set_equation_parser::iterate(vector<vector_4> &points, const quaternion &src_Z, const short unsigned int &max_iterations, const float &threshold)
 {
 	Z = src_Z;
 
-	vector_3 p;
+	vector_4 p;
 	p.x = Z.x;
 	p.y = Z.y;
 	p.z = Z.z;
+	p.w = Z.w;
 	points.push_back(p);
 
 	float len_sq = Z.self_dot();
@@ -37,6 +38,7 @@ float quaternion_julia_set_equation_parser::iterate(vector<vector_3> &points, co
 		p.x = Z.x;
 		p.y = Z.y;
 		p.z = Z.z;
+		p.w = Z.w;
 		points.push_back(p);
 
 		if((len_sq = Z.self_dot()) >= threshold_sq)
