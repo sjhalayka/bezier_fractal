@@ -30,7 +30,7 @@ using namespace cv;
 vector_3 background_colour(1.0, 1.0, 1.0);
 float sphere_colour[] = { 1.0f, 0.5f, 0.0f, 1.0f };
 
-float outline_width = 1.0;
+float outline_width = 3.0;
 static const float outline_colour[] = {0.0, 0.0, 0.0};
 
 bool draw_outline = true;
@@ -78,7 +78,6 @@ vector<vector<vector_4> > pos;
 vector<float> total_lengths;
 vector<float> total_distances;
 vector<float> dist_by_len;
-
 
 
 // https://stackoverflow.com/questions/785097/how-do-i-implement-a-bézier-curve-in-c
@@ -207,7 +206,25 @@ void get_points(size_t res)
 	pos = all_4d_points;
 
 
+	//for (size_t i = 0; i < pos.size(); i++)
+	//{
+	//	for (size_t j = 0; j < pos[i].size(); j++)
+	//	{
+	//		vector_4 mapped;
+	//		float x = pos[i][j].x;
+	//		float y = pos[i][j].y;
+	//		float z = pos[i][j].z;
+	//		float w = pos[i][j].w;
 
+	//		mapped.x = 2.0 * (x*y + z*w);
+	//		mapped.y = 2.0 * (x*w + y*z);
+	//		mapped.z = (x*x + z*z) - (y*y + w*w);
+	//		mapped.w = 0;
+
+	//		pos[i][j] = mapped;
+	//	}
+
+	//}
 
 	for (size_t i = 0; i < pos.size(); i++)
 	{
@@ -230,10 +247,8 @@ void get_points(size_t res)
 	for (size_t i = 0; i < total_lengths.size(); i++)
 		dist_by_len.push_back(total_distances[i] / total_lengths[i]);
 
-
-	//total_lengths = total_distances;
-	//total_lengths = dist_by_len;
-
+	total_lengths = total_distances;
+//	total_lengths = dist_by_len;
 
 
 	float max_length = 0;
@@ -243,6 +258,8 @@ void get_points(size_t res)
 		if (total_lengths[i] > max_length)
 			max_length = total_lengths[i];
 	}
+
+	cout << "max value: " << max_length << endl;
 
 	for (size_t i = 0; i < total_lengths.size(); i++)
 	{
@@ -268,7 +285,7 @@ void get_points(size_t res)
 	Mat hist;
 	calcHist(&data, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
 
-	int hist_w = 512, hist_h = 400;
+	int hist_w = 600, hist_h = 600;
 	int bin_w = cvRound((double)hist_w / histSize);
 	Mat histImage(hist_h, hist_w, CV_8UC3, Scalar(255, 255, 255));
 	normalize(hist, hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
@@ -288,7 +305,7 @@ void get_points(size_t res)
 // TODO: fix camera bug where portrait mode crashes.
 void take_screenshot(size_t num_cams_wide, const char *filename, const bool reverse_rows = false)
 {
-	get_points(150);
+	get_points(300);
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -812,7 +829,7 @@ void draw_objects(bool disable_colouring)
 	if (false == disable_colouring)
 		glMaterialfv(GL_FRONT, GL_DIFFUSE, sphere_colour);
 
-	for (size_t i = 0; i < pos.size(); i++)
+	for (size_t i = 0; i < 1/*pos.size()*/; i++)
 	{
 		for (size_t j = 0; j < pos[i].size() - 1; j++)
 		{
@@ -820,7 +837,7 @@ void draw_objects(bool disable_colouring)
 
 			RGB rgb = HSBtoRGB(300 * t, 75, 100);
 
-			float colour[] = { rgb.r / 255.0, rgb.g / 255.0, rgb.b / 255.0, 1.0f };
+			float colour[] = { rgb.r / 255.0, rgb.g / 255.0, rgb.b / 255.0, 1.0f};
 
 			glMaterialfv(GL_FRONT, GL_DIFFUSE, colour);
 
@@ -847,11 +864,6 @@ void draw_objects(bool disable_colouring)
 			glRotatef(pitch*rad_to_deg, 1.0f, 0.0f, 0.0f);
 
 			gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
-
-			if (j == 0)
-			{
-				gluSphere(glu_obj, 0.005, 10, 10);
-			}
 
 			glPopMatrix();
 		}

@@ -91,6 +91,31 @@ public:
 	vector_4 &normalize(void);
 	double dot(const vector_4 &rhs) const;
 	double self_dot(void) const;
+
+	inline bool operator<(const vector_4 &right) const
+	{
+		if (right.x > x)
+			return true;
+		else if (right.x < x)
+			return false;
+
+		if (right.y > y)
+			return true;
+		else if (right.y < y)
+			return false;
+
+		if (right.z > z)
+			return true;
+		else if (right.z < z)
+			return false;
+
+		if (right.w > w)
+			return true;
+		else if (right.w < w)
+			return false;
+
+		return false;
+	}
 };
 
 

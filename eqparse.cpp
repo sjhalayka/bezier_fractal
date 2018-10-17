@@ -32,8 +32,8 @@ float quaternion_julia_set_equation_parser::iterate(vector<vector_4> &points, co
 
 	for(short unsigned int i = 0; i < max_iterations; i++)
 	{
-		for(size_t i = 0; i < execution_stack.size(); i++)
-			(q_math.*execution_stack[i].f)(execution_stack[i].a, execution_stack[i].b, execution_stack[i].out);
+		for(size_t j = 0; j < execution_stack.size(); j++)
+			(q_math.*execution_stack[j].f)(execution_stack[j].a, execution_stack[j].b, execution_stack[j].out);
 
 		p.x = Z.x;
 		p.y = Z.y;
