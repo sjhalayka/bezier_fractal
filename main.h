@@ -135,7 +135,7 @@ void get_points(size_t res)
 
 	string error_string;
 	quaternion_julia_set_equation_parser eqparser;
-	if (false == eqparser.setup("Z = sin(Z) + C*sin(Z)", error_string, C))
+	if (false == eqparser.setup("Z = Z^2 + C", error_string, C))
 	{
 		cout << "Equation error: " << error_string << endl;
 		return;
@@ -247,7 +247,7 @@ void get_points(size_t res)
 	for (size_t i = 0; i < total_lengths.size(); i++)
 		dist_by_len.push_back(total_distances[i] / total_lengths[i]);
 
-	total_lengths = total_distances;
+//	total_lengths = total_distances;
 //	total_lengths = dist_by_len;
 
 
@@ -259,7 +259,7 @@ void get_points(size_t res)
 			max_length = total_lengths[i];
 	}
 
-	cout << "max value: " << max_length << endl;
+
 
 	for (size_t i = 0; i < total_lengths.size(); i++)
 	{
@@ -271,10 +271,7 @@ void get_points(size_t res)
 	Mat data(1, total_lengths.size(), CV_8UC1, Scalar(0));
 
 	for (size_t i = 0; i < total_lengths.size(); i++)
-	{
 		data.at<unsigned char>(0, i) = static_cast<unsigned char>(total_lengths[i]);
-	}
-
 
 
 
@@ -290,6 +287,21 @@ void get_points(size_t res)
 	Mat histImage(hist_h, hist_w, CV_8UC3, Scalar(255, 255, 255));
 	normalize(hist, hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
 
+	float largest_hist = 0;
+	float largest_hist_j = 0;
+
+	for (int j = 0; j < hist.rows; j++)
+	{
+		for (int i = 0; i < hist.cols; i++)
+		{
+			if (hist.at<float>(j, i) > largest_hist)
+			{
+				largest_hist = hist.at<float>(j, i);
+				largest_hist_j = j;
+			}
+		}
+	}
+
 	for (int i = 1; i < histSize; i++)
 	{
 		line(histImage, Point(bin_w*(i - 1), hist_h - cvRound(hist.at<float>(i - 1))),
@@ -297,6 +309,15 @@ void get_points(size_t res)
 			Scalar(0, 0, 0), 1, 8, 0);
 	}
 
+
+	float factor = static_cast<float>(largest_hist_j * bin_w) / static_cast<float>(histImage.cols - 1);
+	cout << "max value:  " << max_length << endl;
+	cout << "peak value: " << max_length*factor << endl;
+
+
+	circle(histImage, Point(largest_hist_j * bin_w, 0), 2, Scalar(255, 127, 0), 2);
+
+	
 	imshow("calcHist Demo", histImage);
 	waitKey();
 }
@@ -305,7 +326,7 @@ void get_points(size_t res)
 // TODO: fix camera bug where portrait mode crashes.
 void take_screenshot(size_t num_cams_wide, const char *filename, const bool reverse_rows = false)
 {
-	get_points(300);
+	get_points(150);
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -360,6 +381,8 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 					pixel_data[screenshot_index + 2] = fbpixels[fb_index ];
 				}
 			}
+
+			glFlush();
 		}
 	}
 
