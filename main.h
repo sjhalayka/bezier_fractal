@@ -103,6 +103,88 @@ vector_4 getBezierPoint(vector<vector_4> points, float t)
 
 
 
+float mean(const vector<float> &src)
+{
+	float m = 0;
+	float size = static_cast<float>(src.size());
+
+	for (size_t i = 0; i < src.size(); i++)
+		m += src[i];
+
+	m /= size;
+
+	return m;
+}
+
+float standard_deviation(const vector<float> &src)
+{
+	float m = mean(src);
+	float size = static_cast<float>(src.size());
+
+	float sq_diff = 0;
+
+	for (size_t i = 0; i < src.size(); i++)
+	{
+		float diff = src[i] - m;
+		sq_diff += diff*diff;
+	}
+
+	sq_diff /= size;
+
+	return sqrtf(sq_diff);
+}
+
+float variance(const vector<float> &src)
+{
+	float s = standard_deviation(src);
+
+	return s*s;
+}
+
+// https://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm
+float kurtosis(const vector<float> &src)
+{
+	float m = mean(src);
+	float s = standard_deviation(src);
+	float size = static_cast<float>(src.size());
+
+	float cube_diff = 0;
+
+	for (size_t i = 0; i < src.size(); i++)
+	{
+		float diff = src[i] - m;
+		cube_diff += diff*diff*diff;
+	}
+
+	cube_diff /= size;
+	cube_diff /= s*s*s;
+
+	return cube_diff;
+}
+
+// https://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm
+float skewness(const vector<float> &src)
+{
+	float m = mean(src);
+	float s = standard_deviation(src);
+	float size = static_cast<float>(src.size());
+
+	float fourth_diff = 0;
+
+	for (size_t i = 0; i < src.size(); i++)
+	{
+		float diff = src[i] - m;
+		fourth_diff += diff*diff*diff*diff;
+	}
+
+	fourth_diff /= size;
+	fourth_diff /= s*s*s*s;
+
+	return fourth_diff;
+}
+
+
+
 void get_points(size_t res)
 {
 	all_4d_points.clear();
@@ -250,6 +332,17 @@ void get_points(size_t res)
 //	total_lengths = total_distances;
 //	total_lengths = dist_by_len;
 
+	cout << endl;
+	cout << "mean:     " << mean(total_lengths) << endl;
+	cout << "std dev:  " << standard_deviation(total_lengths) << endl;
+	cout << "variance: " << variance(total_lengths) << endl;
+	cout << "kurtosis: " << kurtosis(total_lengths) << endl;
+	cout << "skewness: " << skewness(total_lengths) << endl;
+
+
+
+
+
 
 	float max_length = 0;
 
@@ -259,14 +352,16 @@ void get_points(size_t res)
 			max_length = total_lengths[i];
 	}
 
-
-
 	for (size_t i = 0; i < total_lengths.size(); i++)
 	{
 		total_lengths[i] /= max_length;
 		total_lengths[i] *= 255.0f;
 		total_lengths[i] = floorf(total_lengths[i]);
-	}	
+	}
+
+
+
+
 
 	Mat data(1, total_lengths.size(), CV_8UC1, Scalar(0));
 
@@ -381,8 +476,6 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 					pixel_data[screenshot_index + 2] = fbpixels[fb_index ];
 				}
 			}
-
-			glFlush();
 		}
 	}
 
