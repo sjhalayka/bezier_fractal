@@ -78,7 +78,7 @@ vector<vector<vector_4> > pos;
 vector<float> total_lengths;
 vector<float> total_distances;
 vector<float> dist_by_len;
-
+vector<float> mags;
 
 // https://stackoverflow.com/questions/785097/how-do-i-implement-a-bézier-curve-in-c
 vector_4 getBezierPoint(vector<vector_4> points, float t)
@@ -142,7 +142,7 @@ float variance(const vector<float> &src)
 }
 
 // https://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm
-float kurtosis(const vector<float> &src)
+float skewness(const vector<float> &src)
 {
 	float m = mean(src);
 	float s = standard_deviation(src);
@@ -163,7 +163,7 @@ float kurtosis(const vector<float> &src)
 }
 
 // https://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm
-float skewness(const vector<float> &src)
+float kurtosis(const vector<float> &src)
 {
 	float m = mean(src);
 	float s = standard_deviation(src);
@@ -179,6 +179,8 @@ float skewness(const vector<float> &src)
 
 	fourth_diff /= size;
 	fourth_diff /= s*s*s*s;
+
+	fourth_diff -= 3.0f;
 
 	return fourth_diff;
 }
@@ -217,7 +219,7 @@ void get_points(size_t res)
 
 	string error_string;
 	quaternion_julia_set_equation_parser eqparser;
-	if (false == eqparser.setup("Z = Z^2 + C", error_string, C))
+	if (false == eqparser.setup("Z = Z^5 + C", error_string, C))
 	{
 		cout << "Equation error: " << error_string << endl;
 		return;
@@ -242,7 +244,10 @@ void get_points(size_t res)
 			float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
 			if (length < threshold)
+			{
+				mags.push_back(length);
 				all_4d_points.push_back(points);
+			}
 		}
 	}
 
@@ -264,7 +269,10 @@ void get_points(size_t res)
 				float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
 				if (length < threshold)
+				{
+					mags.push_back(length);
 					all_4d_points.push_back(points);
+				}
 			}
 		}
 	}
@@ -329,6 +337,7 @@ void get_points(size_t res)
 	for (size_t i = 0; i < total_lengths.size(); i++)
 		dist_by_len.push_back(total_distances[i] / total_lengths[i]);
 
+	total_lengths = mags;
 //	total_lengths = total_distances;
 //	total_lengths = dist_by_len;
 
@@ -336,8 +345,9 @@ void get_points(size_t res)
 	cout << "mean:     " << mean(total_lengths) << endl;
 	cout << "std dev:  " << standard_deviation(total_lengths) << endl;
 	cout << "variance: " << variance(total_lengths) << endl;
-	cout << "kurtosis: " << kurtosis(total_lengths) << endl;
 	cout << "skewness: " << skewness(total_lengths) << endl;
+	cout << "kurtosis: " << kurtosis(total_lengths) << endl;
+
 
 
 
