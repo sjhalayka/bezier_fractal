@@ -34,7 +34,7 @@ static const float outline_colour[] = {0.0, 0.0, 0.0};
 bool draw_outline = true;
 bool draw_axis = true;
 bool draw_control_list = true;
-
+bool screenshot_mode = false;
 
 uv_camera main_camera;
 
@@ -203,7 +203,9 @@ void get_points(size_t res)
 // TODO: fix camera bug where portrait mode crashes.
 void take_screenshot(size_t num_cams_wide, const char *filename, const bool reverse_rows = false)
 {
-	get_points(10);
+	screenshot_mode = true;
+
+	get_points(150);
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -260,6 +262,8 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 			}
 		}
 	}
+
+	screenshot_mode = false;
 
 	// Restore the parameters.
 	draw_control_list = temp_draw_control_list;
@@ -473,8 +477,11 @@ void display_func(void)
 		// End text drawing code.
 	}
 
-	glFlush();
-	glutSwapBuffers();
+	if (false == screenshot_mode)
+	{
+		glFlush();
+		glutSwapBuffers();
+	}
 }
 
 void keyboard_func(unsigned char key, int x, int y)
