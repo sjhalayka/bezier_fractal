@@ -205,7 +205,7 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 {
 	screenshot_mode = true;
 
-	get_points(150);
+	get_points(50);
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -234,11 +234,15 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 
 	vector<unsigned char> fbpixels(3*win_x*win_y);
 
+	const size_t total_cams = num_cams_wide * num_cams_wide;
+	size_t cam_count = 0;
 	// Loop through subcameras.
 	for(size_t cam_num_x = 0; cam_num_x < num_cams_wide; cam_num_x++)
 	{
 		for(size_t cam_num_y = 0; cam_num_y < num_cams_wide; cam_num_y++)
 		{
+			cout << "Camera: " << cam_count + 1 << " of " << total_cams << endl;
+
 			// Set up camera, draw, then copy the frame buffer.
 			main_camera.Set_Large_Screenshot(num_cams_wide, cam_num_x, cam_num_y);
 			display_func();
@@ -260,7 +264,10 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 					pixel_data[screenshot_index + 2] = fbpixels[fb_index ];
 				}
 			}
+
+			cam_count++;
 		}
+
 	}
 
 	screenshot_mode = false;
@@ -505,7 +512,7 @@ void keyboard_func(unsigned char key, int x, int y)
 		}
 	case 'l':
 		{
-			take_screenshot(12, "screenshot.tga");
+			take_screenshot(3, "screenshot.tga");
 			break;
 		}
 
