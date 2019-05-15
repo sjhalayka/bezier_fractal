@@ -22,9 +22,7 @@ using std::ios;
 #include <sstream>
 using namespace std;
 
-#include <opencv2/opencv.hpp>
-using namespace cv;
-#pragma comment(lib, "opencv_world340.lib")
+
 
 
 vector_3 background_colour(1.0, 1.0, 1.0);
@@ -75,10 +73,6 @@ void draw_objects(bool disable_colouring = false);
 vector<vector<vector_4> > all_4d_points;
 vector<vector<vector_4> > pos;
 
-vector<float> total_lengths;
-vector<float> total_distances;
-vector<float> dist_by_len;
-vector<float> mags;
 
 // https://stackoverflow.com/questions/785097/how-do-i-implement-a-bézier-curve-in-c
 vector_4 getBezierPoint(vector<vector_4> points, float t)
@@ -103,87 +97,6 @@ vector_4 getBezierPoint(vector<vector_4> points, float t)
 
 
 
-float mean(const vector<float> &src)
-{
-	float m = 0;
-	float size = static_cast<float>(src.size());
-
-	for (size_t i = 0; i < src.size(); i++)
-		m += src[i];
-
-	m /= size;
-
-	return m;
-}
-
-float standard_deviation(const vector<float> &src)
-{
-	float m = mean(src);
-	float size = static_cast<float>(src.size());
-
-	float sq_diff = 0;
-
-	for (size_t i = 0; i < src.size(); i++)
-	{
-		float diff = src[i] - m;
-		sq_diff += diff*diff;
-	}
-
-	sq_diff /= size;
-
-	return sqrtf(sq_diff);
-}
-
-float variance(const vector<float> &src)
-{
-	float s = standard_deviation(src);
-
-	return s*s;
-}
-
-// https://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm
-float skewness(const vector<float> &src)
-{
-	float m = mean(src);
-	float s = standard_deviation(src);
-	float size = static_cast<float>(src.size());
-
-	float cube_diff = 0;
-
-	for (size_t i = 0; i < src.size(); i++)
-	{
-		float diff = src[i] - m;
-		cube_diff += diff*diff*diff;
-	}
-
-	cube_diff /= size;
-	cube_diff /= s*s*s;
-
-	return cube_diff;
-}
-
-// https://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm
-float kurtosis(const vector<float> &src)
-{
-	float m = mean(src);
-	float s = standard_deviation(src);
-	float size = static_cast<float>(src.size());
-
-	float fourth_diff = 0;
-
-	for (size_t i = 0; i < src.size(); i++)
-	{
-		float diff = src[i] - m;
-		fourth_diff += diff*diff*diff*diff;
-	}
-
-	fourth_diff /= size;
-	fourth_diff /= s*s*s*s;
-
-	fourth_diff -= 3.0f;
-
-	return fourth_diff;
-}
 
 
 
@@ -191,10 +104,6 @@ void get_points(size_t res)
 {
 	all_4d_points.clear();
 	pos.clear();
-
-	total_lengths.clear();
-	total_distances.clear();
-	dist_by_len.clear();
 
 	float x_grid_max = 1.5;
 	float y_grid_max = 1.5;
@@ -245,7 +154,6 @@ void get_points(size_t res)
 
 			if (length < threshold)
 			{
-				mags.push_back(length);
 				all_4d_points.push_back(points);
 			}
 		}
@@ -270,168 +178,32 @@ void get_points(size_t res)
 
 				if (length < threshold)
 				{
-					mags.push_back(length);
 					all_4d_points.push_back(points);
 				}
 			}
 		}
 	}
 
-
-
-
-	//for (size_t i = 0; i < all_4d_points.size(); i++)
-	//{
-	//	vector<vector_4> p;
-
-	//	for (float t = 0; t <= 1.0; t += 0.01)
-	//	{
-	//		vector_4 v = getBezierPoint(all_4d_points[i], t);
-	//		p.push_back(v);
-	//	}
-
-	//	pos.push_back(p);
-	//}
-
-	pos = all_4d_points;
-
-
-	//for (size_t i = 0; i < pos.size(); i++)
-	//{
-	//	for (size_t j = 0; j < pos[i].size(); j++)
-	//	{
-	//		vector_4 mapped;
-	//		float x = pos[i][j].x;
-	//		float y = pos[i][j].y;
-	//		float z = pos[i][j].z;
-	//		float w = pos[i][j].w;
-
-	//		mapped.x = 2.0 * (x*y + z*w);
-	//		mapped.y = 2.0 * (x*w + y*z);
-	//		mapped.z = (x*x + z*z) - (y*y + w*w);
-	//		mapped.w = 0;
-
-	//		pos[i][j] = mapped;
-	//	}
-
-	//}
-
-	for (size_t i = 0; i < pos.size(); i++)
+	for (size_t i = 0; i < all_4d_points.size(); i++)
 	{
-		float total_len = 0;
+		vector<vector_4> p;
 
-		for (size_t j = 0; j < pos[i].size() - 1; j++)
+		for (float t = 0; t <= 0.2; t += 0.01)
 		{
-			vector_4 line = pos[i][j + 1] - pos[i][j];
-
-			float line_len = line.length();		
-			total_len += line_len;
+			vector_4 v = getBezierPoint(all_4d_points[i], t);
+			p.push_back(v);
 		}
 
-		total_lengths.push_back(total_len);
-
-		float distance = (pos[pos.size() - 1][0] - pos[i][0]).length();
-		total_distances.push_back(distance);
+		pos.push_back(p);
 	}
 
-	for (size_t i = 0; i < total_lengths.size(); i++)
-		dist_by_len.push_back(total_distances[i] / total_lengths[i]);
-
-	total_lengths = mags;
-//	total_lengths = total_distances;
-//	total_lengths = dist_by_len;
-
-	cout << endl;
-	cout << "mean:     " << mean(total_lengths) << endl;
-	cout << "std dev:  " << standard_deviation(total_lengths) << endl;
-	cout << "variance: " << variance(total_lengths) << endl;
-	cout << "skewness: " << skewness(total_lengths) << endl;
-	cout << "kurtosis: " << kurtosis(total_lengths) << endl;
-
-
-
-
-
-
-
-	float max_length = 0;
-
-	for (size_t i = 0; i < total_lengths.size(); i++)
-	{
-		if (total_lengths[i] > max_length)
-			max_length = total_lengths[i];
-	}
-
-	for (size_t i = 0; i < total_lengths.size(); i++)
-	{
-		total_lengths[i] /= max_length;
-		total_lengths[i] *= 255.0f;
-		total_lengths[i] = floorf(total_lengths[i]);
-	}
-
-
-
-
-
-	Mat data(1, total_lengths.size(), CV_8UC1, Scalar(0));
-
-	for (size_t i = 0; i < total_lengths.size(); i++)
-		data.at<unsigned char>(0, i) = static_cast<unsigned char>(total_lengths[i]);
-
-
-
-	int histSize = 256;
-	float range[] = { 0, 256 }; //the upper boundary is exclusive
-	const float* histRange = { range };
-	bool uniform = true, accumulate = false;
-	Mat hist;
-	calcHist(&data, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
-
-	int hist_w = 600, hist_h = 600;
-	int bin_w = cvRound((double)hist_w / histSize);
-	Mat histImage(hist_h, hist_w, CV_8UC3, Scalar(255, 255, 255));
-	normalize(hist, hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
-
-	float largest_hist = 0;
-	float largest_hist_j = 0;
-
-	for (int j = 0; j < hist.rows; j++)
-	{
-		for (int i = 0; i < hist.cols; i++)
-		{
-			if (hist.at<float>(j, i) > largest_hist)
-			{
-				largest_hist = hist.at<float>(j, i);
-				largest_hist_j = j;
-			}
-		}
-	}
-
-	for (int i = 1; i < histSize; i++)
-	{
-		line(histImage, Point(bin_w*(i - 1), hist_h - cvRound(hist.at<float>(i - 1))),
-			Point(bin_w*(i), hist_h - cvRound(hist.at<float>(i))),
-			Scalar(0, 0, 0), 1, 8, 0);
-	}
-
-
-	float factor = static_cast<float>(largest_hist_j * bin_w) / static_cast<float>(histImage.cols - 1);
-	cout << "max value:  " << max_length << endl;
-	cout << "peak value: " << max_length*factor << endl;
-
-
-	circle(histImage, Point(largest_hist_j * bin_w, 0), 2, Scalar(255, 127, 0), 2);
-
-	
-	imshow("calcHist Demo", histImage);
-	waitKey();
 }
 
 
 // TODO: fix camera bug where portrait mode crashes.
 void take_screenshot(size_t num_cams_wide, const char *filename, const bool reverse_rows = false)
 {
-	get_points(150);
+	get_points(10);
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -955,7 +727,7 @@ void draw_objects(bool disable_colouring)
 	if (false == disable_colouring)
 		glMaterialfv(GL_FRONT, GL_DIFFUSE, sphere_colour);
 
-	for (size_t i = 0; i < 1/*pos.size()*/; i++)
+	for (size_t i = 0; i < pos.size(); i++)
 	{
 		for (size_t j = 0; j < pos[i].size() - 1; j++)
 		{
