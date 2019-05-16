@@ -512,7 +512,7 @@ void keyboard_func(unsigned char key, int x, int y)
 		}
 	case 'l':
 		{
-			take_screenshot(3, "screenshot.tga");
+			take_screenshot(12, "screenshot.tga");
 			break;
 		}
 
