@@ -188,7 +188,7 @@ void get_points(size_t res)
 	{
 		vector<vector_4> p;
 
-		for (float t = 0; t <= 0.2; t += 0.01)
+		for (float t = 0; t <= 0.2f; t += 0.001f)
 		{
 			vector_4 v = getBezierPoint(all_4d_points[i], t);
 			p.push_back(v);
@@ -205,7 +205,7 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 {
 	screenshot_mode = true;
 
-	get_points(50);
+	get_points(10);
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -216,8 +216,8 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 	unsigned char  colourmapdepth = 0;
 	unsigned short int x_origin = 0;
 	unsigned short int y_origin = 0;
-	unsigned short int px = win_x*num_cams_wide;
-	unsigned short int py = win_y*num_cams_wide;
+	unsigned short int px = win_x*static_cast<unsigned short>(num_cams_wide);
+	unsigned short int py = win_y*static_cast<unsigned short>(num_cams_wide);
 	unsigned char  bitsperpixel = 24;
 	unsigned char  imagedescriptor = 0;
 	vector<char> idstring;
@@ -364,7 +364,7 @@ void init_opengl(const int &width, const int &height)
 	glLightfv(GL_LIGHT5, GL_POSITION, light5_position);
 	glLightfv(GL_LIGHT5, GL_DIFFUSE, light_colour2);
 
-	glClearColor(background_colour.x, background_colour.y, background_colour.z, 1);
+	glClearColor(static_cast<float>(background_colour.x), static_cast<float>(background_colour.y), static_cast<float>(background_colour.z), 1.0f);
 	glClearDepth(1.0f);
 
 	main_camera.Set(0, 0, camera_w, camera_fov, win_x, win_y, camera_near, camera_far);
@@ -459,7 +459,7 @@ void display_func(void)
 		glLoadIdentity();
 		gluOrtho2D(0, win_x, 0, win_y);
 		glScalef(1, -1, 1); // Neat. :)
-		glTranslatef(0, -win_y, 0); // Neat. :)
+		glTranslatef(0, -static_cast<float>(win_y), 0); // Neat. :)
 		glMatrixMode(GL_MODELVIEW);
 		glPushMatrix();
 		glLoadIdentity();
@@ -732,7 +732,7 @@ void draw_objects(bool disable_colouring)
 		glDisable(GL_LIGHTING);
 	}
 
-	static const float rad_to_deg = 180.0f/pi;
+	static const float rad_to_deg = 180.0f/static_cast<float>(pi);
 
 	glPushMatrix();
 
@@ -747,30 +747,28 @@ void draw_objects(bool disable_colouring)
 		{
 			double t = j / static_cast<double>(pos[i].size() - 1);
 
-			RGB rgb = HSBtoRGB(300 * t, 75, 100);
+			RGB rgb = HSBtoRGB(static_cast<unsigned short>(300.f * t), 75, 100);
 
-			float colour[] = { rgb.r / 255.0, rgb.g / 255.0, rgb.b / 255.0, 1.0f};
+			float colour[] = { rgb.r / 255.0f, rgb.g / 255.0f, rgb.b / 255.0f, 1.0f};
 
 			glMaterialfv(GL_FRONT, GL_DIFFUSE, colour);
-
-			static const float rad_to_deg = 180.0f / pi;
 
 			vector_4 line = pos[i][j + 1] - pos[i][j];
 			
 			glPushMatrix();
-			glTranslatef(pos[i][j].x, pos[i][j].y, pos[i][j].z);
+			glTranslatef(static_cast<float>(pos[i][j].x), static_cast<float>(pos[i][j].y), static_cast<float>(pos[i][j].z));
 
-			float line_len = line.length();
+			float line_len = static_cast<float>(line.length());
 			line.normalize();
 			
 			float yaw = 0.0f;
 
-			if (fabsf(line.x) < 0.00001 && fabsf(line.z) < 0.00001)
+			if (fabsf(static_cast<float>(line.x)) < 0.00001f && fabsf(static_cast<float>(line.z)) < 0.00001f)
 				yaw = 0.0f;
 			else
-				yaw = atan2f(line.x, line.z);
+				yaw = atan2f(static_cast<float>(line.x), static_cast<float>(line.z));
 
-			float pitch = -atan2f(line.y, sqrt(line.x*line.x + line.z*line.z));
+			float pitch = -atan2f(static_cast<float>(line.y), static_cast<float>(sqrt(line.x*line.x + line.z*line.z)));
 
 			glRotatef(yaw*rad_to_deg, 0.0f, 1.0f, 0.0f);
 			glRotatef(pitch*rad_to_deg, 1.0f, 0.0f, 0.0f);

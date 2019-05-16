@@ -76,7 +76,7 @@ void uv_camera::Transform(void)
 void uv_camera::Set(void)
 {
 	// Force a recalculation of the camera vectors and frustum.
-	Set(u, v, w, fov, win_x, win_y, near_plane, far_plane);
+	Set(u, v, w, fov, static_cast<int>(win_x), static_cast<int>(win_y), near_plane, far_plane);
 }
 
 void uv_camera::Set_Large_Screenshot(size_t num_cams, size_t cam_index_x, size_t cam_index_y)
