@@ -216,6 +216,16 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 	unsigned char  colourmapdepth = 0;
 	unsigned short int x_origin = 0;
 	unsigned short int y_origin = 0;
+
+	cout << "Image size: " << static_cast<size_t>(win_x)*num_cams_wide << "x" << static_cast<size_t>(win_y)*num_cams_wide << " pixels" << endl;
+
+	if (static_cast<size_t>(win_x)*num_cams_wide > static_cast<unsigned short>(-1) ||
+		static_cast<size_t>(win_y)*num_cams_wide > static_cast<unsigned short>(-1))
+	{
+		cout << "Image too large. Maximum width and height is " << static_cast<unsigned short>(-1) << endl;
+		return;
+	}
+
 	unsigned short int px = win_x*static_cast<unsigned short>(num_cams_wide);
 	unsigned short int py = win_y*static_cast<unsigned short>(num_cams_wide);
 	unsigned char  bitsperpixel = 24;
