@@ -320,7 +320,7 @@ void get_points(size_t res)
 	unsigned short int max_iterations = 8;
 	float threshold = 4;
 
-	string equation_string = "Z = Z^5 + C";
+	string equation_string = "Z = sin(Z) + C*sin(Z)";
 	string error_string;
 	quaternion_julia_set_equation_parser eqparser;
 	if (false == eqparser.setup(equation_string, error_string, C))
@@ -385,7 +385,7 @@ void get_points(size_t res)
 	{
 		vector<vector_4> p;
 
-		for (float t = 0; t <= 1.0f; t += 0.001f)
+		for (float t = 0; t <= 0.2f; t += 0.001f)
 		{
 			vector_4 v = getBezierPoint(all_4d_points[i], t);
 			p.push_back(v);
@@ -402,7 +402,7 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 {
 	screenshot_mode = true;
 
-	get_points(10);
+	get_points(50);
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -1072,15 +1072,15 @@ void draw_objects(bool disable_colouring)
 
 		glBegin(GL_LINES);
 
-		glColor4f(0, 0, 0, 0.5);
+		//glColor4f(0, 0, 0, 0.5);
 
-		//		glColor4f(1, 0, 0, 0.25);
+		glColor4f(1, 0, 0, 0.25);
 		glVertex3f(0, 0, 0);
 		glVertex3f(1, 0, 0);
-		//		glColor4f(0, 1, 0, 0.25);
+		glColor4f(0, 1, 0, 0.25);
 		glVertex3f(0, 0, 0);
 		glVertex3f(0, 1, 0);
-		//		glColor4f(0, 0, 1, 0.25);
+		glColor4f(0, 0, 1, 0.25);
 		glVertex3f(0, 0, 0);
 		glVertex3f(0, 0, 1);
 
