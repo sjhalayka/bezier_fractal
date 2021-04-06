@@ -9,7 +9,10 @@
 
 
 #include "uv_camera.h"
-//#include "qjs.h"
+
+#include "marching_cubes.h"
+using namespace marching_cubes;
+
 #include "eqparse.h"
 
 #include <fstream>
@@ -25,12 +28,15 @@ using namespace std;
 
 
 
+
 vector_3 background_colour(1.0, 1.0, 1.0);
-float sphere_colour[] = { 1.0f, 0.5f, 0.0f, 1.0f };
+float orange[] = { 1.0f, 0.5f, 0.0f, 1.0f };
+float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.1f };
 
 float outline_width = 3.0;
 static const float outline_colour[] = {0.0, 0.0, 0.0};
 
+bool draw_mesh = true;
 bool draw_outline = true;
 bool draw_axis = true;
 bool draw_control_list = true;
@@ -69,6 +75,11 @@ void passive_motion_func(int x, int y);
 void draw_objects(bool disable_colouring = false);
 
 
+vector<triangle> tris;
+vector<vertex_3> face_normals;
+vector<vertex_3> vertices;
+vector<vertex_3> vertex_normals;
+
 
 vector<vector<vector_4> > all_4d_points;
 vector<vector<vector_4> > pos;
@@ -95,6 +106,190 @@ vector_4 getBezierPoint(vector<vector_4> points, float t)
 	return points[0];
 }
 
+
+void get_vertices_and_normals_from_triangles(vector<triangle>& t, vector<vertex_3>& fn, vector<vertex_3>& v, vector<vertex_3>& vn)
+{
+	fn.clear();
+	v.clear();
+	vn.clear();
+
+	if (0 == t.size())
+		return;
+
+	cout << "Triangles: " << t.size() << endl;
+
+	cout << "Welding vertices" << endl;
+
+	// Insert unique vertices into set.
+	set<vertex_3> vertex_set;
+
+	for (vector<triangle>::const_iterator i = t.begin(); i != t.end(); i++)
+	{
+		vertex_set.insert(i->vertex[0]);
+		vertex_set.insert(i->vertex[1]);
+		vertex_set.insert(i->vertex[2]);
+	}
+
+	cout << "Vertices: " << vertex_set.size() << endl;
+
+	cout << "Generating vertex indices" << endl;
+
+	// Add indices to the vertices.
+	for (set<vertex_3>::const_iterator i = vertex_set.begin(); i != vertex_set.end(); i++)
+	{
+		size_t index = v.size();
+		v.push_back(*i);
+		v[index].index = index;
+	}
+
+	vertex_set.clear();
+
+	// Re-insert modifies vertices into set.
+	for (vector<vertex_3>::const_iterator i = v.begin(); i != v.end(); i++)
+		vertex_set.insert(*i);
+
+	cout << "Assigning vertex indices to triangles" << endl;
+
+	// Find the three vertices for each triangle, by index.
+	set<vertex_3>::iterator find_iter;
+
+	for (vector<triangle>::iterator i = t.begin(); i != t.end(); i++)
+	{
+		find_iter = vertex_set.find(i->vertex[0]);
+		i->vertex[0].index = find_iter->index;
+
+		find_iter = vertex_set.find(i->vertex[1]);
+		i->vertex[1].index = find_iter->index;
+
+		find_iter = vertex_set.find(i->vertex[2]);
+		i->vertex[2].index = find_iter->index;
+	}
+
+	vertex_set.clear();
+
+	cout << "Calculating normals" << endl;
+	fn.resize(t.size());
+	vn.resize(v.size());
+
+	for (size_t i = 0; i < t.size(); i++)
+	{
+		vertex_3 v0 = t[i].vertex[1] - t[i].vertex[0];
+		vertex_3 v1 = t[i].vertex[2] - t[i].vertex[0];
+		fn[i] = v0.cross(v1);
+		fn[i].normalize();
+
+		vn[t[i].vertex[0].index] = vn[t[i].vertex[0].index] + fn[i];
+		vn[t[i].vertex[1].index] = vn[t[i].vertex[1].index] + fn[i];
+		vn[t[i].vertex[2].index] = vn[t[i].vertex[2].index] + fn[i];
+	}
+
+	for (size_t i = 0; i < vn.size(); i++)
+		vn[i].normalize();
+}
+
+
+void get_isosurface(const string equation, 
+	const float grid_max, 
+	const size_t res, 
+	const float z_w, 
+	const quaternion C, 
+	const unsigned short int max_iterations,
+	const float threshold)
+{
+	const float grid_min = -grid_max;
+
+	const bool make_border = true;
+
+	string error_string;
+	quaternion_julia_set_equation_parser eqparser;
+	if (false == eqparser.setup(equation, error_string, C))
+	{
+		cout << "Equation error: " << error_string << endl;
+		return;
+	}
+
+	// When adding a border, use a value that is greater than the threshold.
+	const float border_value = 1.0f + threshold;
+
+	tris.clear();
+	vector<float> xyplane0(res * res, 0);
+	vector<float> xyplane1(res * res, 0);
+
+	const float step_size = (grid_max - grid_min) / (res - 1);
+
+	size_t z = 0;
+
+	quaternion Z(grid_min, grid_min, grid_min, z_w);
+
+	vector<vector_4> points;
+
+	// Calculate xy plane 0.
+	for (size_t x = 0; x < res; x++, Z.x += step_size)
+	{
+		Z.y = grid_min;
+
+		for (size_t y = 0; y < res; y++, Z.y += step_size)
+		{
+			if (true == make_border && (x == 0 || y == 0 || z == 0 || x == res - 1 || y == res - 1 || z == res - 1))
+				xyplane0[x * res + y] = border_value;
+			else
+				xyplane0[x * res + y] = eqparser.iterate(points, Z, max_iterations, threshold);
+		}
+	}
+
+	// Prepare for xy plane 1.
+	z++;
+	Z.z += step_size;
+
+	size_t box_count = 0;
+
+	// Calculate xy planes 1 and greater.
+	for (; z < res; z++, Z.z += step_size)
+	{
+		Z.x = grid_min;
+
+		cout << "Calculating triangles from xy-plane pair " << z << " of " << res - 1 << endl;
+
+		for (size_t x = 0; x < res; x++, Z.x += step_size)
+		{
+			Z.y = grid_min;
+
+			for (size_t y = 0; y < res; y++, Z.y += step_size)
+			{
+				vector<vector_4> points;
+
+				if (true == make_border && (x == 0 || y == 0 || z == 0 || x == res - 1 || y == res - 1 || z == res - 1))
+					xyplane1[x * res + y] = border_value;
+				else
+					xyplane1[x * res + y] = eqparser.iterate(points, Z, max_iterations, threshold);
+			}
+		}
+
+		// Calculate triangles for the xy-planes corresponding to z - 1 and z by marching cubes.
+		tesselate_adjacent_xy_plane_pair(
+			box_count,
+			xyplane0, xyplane1,
+			z - 1,
+			tris,
+			threshold, // Use threshold as isovalue.
+			grid_min, grid_max, res,
+			grid_min, grid_max, res,
+			grid_min, grid_max, res);
+
+		// Swap memory pointers (fast) instead of performing a memory copy (slow).
+		xyplane1.swap(xyplane0);
+	}
+
+	cout << endl;
+
+
+	if(tris.size() > 0)
+		get_vertices_and_normals_from_triangles(tris, face_normals, vertices, vertex_normals);
+
+	// Print box-counting dimension
+	// Make sure that step_size != 1.0f :)
+	cout << "Box counting dimension: " << logf(static_cast<float>(box_count)) / logf(1.0f / step_size) << endl;
+}
 
 
 
@@ -125,14 +320,16 @@ void get_points(size_t res)
 	unsigned short int max_iterations = 8;
 	float threshold = 4;
 
-
+	string equation_string = "Z = Z^5 + C";
 	string error_string;
 	quaternion_julia_set_equation_parser eqparser;
-	if (false == eqparser.setup("Z = Z^5 + C", error_string, C))
+	if (false == eqparser.setup(equation_string, error_string, C))
 	{
 		cout << "Equation error: " << error_string << endl;
 		return;
 	}
+	
+	get_isosurface(equation_string, x_grid_max, 100, z_w, C, max_iterations, threshold);
 
 	const float x_step_size = (x_grid_max - x_grid_min) / (x_res - 1);
 	const float y_step_size = (y_grid_max - y_grid_min) / (y_res - 1);
@@ -188,7 +385,7 @@ void get_points(size_t res)
 	{
 		vector<vector_4> p;
 
-		for (float t = 0; t <= 0.2f; t += 0.001f)
+		for (float t = 0; t <= 1.0f; t += 0.001f)
 		{
 			vector_4 v = getBezierPoint(all_4d_points[i], t);
 			p.push_back(v);
@@ -417,6 +614,10 @@ void display_func(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
+
+
+
+
 	if(true == draw_outline)
 	{
 		glDisable(GL_DEPTH_TEST);
@@ -440,6 +641,9 @@ void display_func(void)
 
 
 	// Draw the model's components using OpenGL/GLUT primitives.
+
+
+
 	draw_objects();
 
 
@@ -494,6 +698,45 @@ void display_func(void)
 		// End text drawing code.
 	}
 
+
+	glEnable(GL_DEPTH_TEST);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_LIGHT1);
+	glEnable(GL_LIGHT2);
+	glEnable(GL_LIGHT3);
+	glEnable(GL_LIGHT4);
+	glEnable(GL_LIGHT5);
+
+	glEnable(GL_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mesh_transparent);
+
+	glBegin(GL_TRIANGLES);
+
+	for (size_t i = 0; i < tris.size(); i++)
+	{
+		size_t v_index0 = tris[i].vertex[0].index;
+		size_t v_index1 = tris[i].vertex[1].index;
+		size_t v_index2 = tris[i].vertex[2].index;
+
+		glNormal3f(vertex_normals[v_index0].x, vertex_normals[v_index0].y, vertex_normals[v_index0].z);
+		glVertex3f(vertices[v_index0].x, vertices[v_index0].y, vertices[v_index0].z);
+		glNormal3f(vertex_normals[v_index1].x, vertex_normals[v_index1].y, vertex_normals[v_index1].z);
+		glVertex3f(vertices[v_index1].x, vertices[v_index1].y, vertices[v_index1].z);
+		glNormal3f(vertex_normals[v_index2].x, vertex_normals[v_index2].y, vertex_normals[v_index2].z);
+		glVertex3f(vertices[v_index2].x, vertices[v_index2].y, vertices[v_index2].z);
+	}
+
+	glEnd();
+
+	glDisable(GL_BLEND);
+	glDisable(GL_ALPHA);
+
+
 	if (false == screenshot_mode)
 	{
 		glFlush();
@@ -505,6 +748,11 @@ void keyboard_func(unsigned char key, int x, int y)
 {
 	switch(tolower(key))
 	{
+	case 'y':
+	{
+		draw_mesh = !draw_mesh;
+		break;
+	}
 	case 'h':
 		{
 			draw_outline = !draw_outline;
@@ -522,7 +770,7 @@ void keyboard_func(unsigned char key, int x, int y)
 		}
 	case 'l':
 		{
-			take_screenshot(12, "screenshot.tga");
+			take_screenshot(8, "screenshot.tga");
 			break;
 		}
 
@@ -726,6 +974,11 @@ RGB HSBtoRGB(unsigned short int hue_degree, unsigned char sat_percent, unsigned 
 // This render mode won't apply to a curved 3D space.
 void draw_objects(bool disable_colouring)
 {
+
+
+
+
+
 	if(false == disable_colouring)
 	{
 		glEnable(GL_LIGHTING);
@@ -748,8 +1001,15 @@ void draw_objects(bool disable_colouring)
 
 	glTranslatef(camera_x_transform, camera_y_transform, 0);
 
+
+
+
+
+
+
+
 	if (false == disable_colouring)
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, sphere_colour);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
 
 	for (size_t i = 0; i < pos.size(); i++)
 	{
@@ -783,11 +1043,21 @@ void draw_objects(bool disable_colouring)
 			glRotatef(yaw*rad_to_deg, 0.0f, 1.0f, 0.0f);
 			glRotatef(pitch*rad_to_deg, 1.0f, 0.0f, 0.0f);
 
-			gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
+
+			if(j == 0)
+				glutSolidSphere(0.005 * 1.5, 16, 16);
+			else if(j < pos[i].size() - 2)
+				gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
+			else
+				glutSolidCone(0.005*4, 0.005*8, 4, 2);
 
 			glPopMatrix();
 		}
+
 	}
+
+
+
 
 	glDisable(GL_LIGHTING);
 
