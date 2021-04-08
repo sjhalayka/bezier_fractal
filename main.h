@@ -315,14 +315,14 @@ void get_points(size_t res)
 
 	float z_w = 0;
 	quaternion C;
-	C.x = 0.3f;
-	C.y = 0.5f;
-	C.z = 0.4f;
-	C.w = 0.2f;
+	C.x = 1;
+	C.y = 1;
+	C.z = 1;
+	C.w = 1;
 	unsigned short int max_iterations = 8;
 	float threshold = 4;
 
-	string equation_string = "Z = Z*Z + C";
+	string equation_string = "Z = inverse(sinh(Z)) + C * inverse(sinh(Z))";
 	string error_string;
 	quaternion_julia_set_equation_parser eqparser;
 	if (false == eqparser.setup(equation_string, error_string, C))
@@ -331,7 +331,7 @@ void get_points(size_t res)
 		return;
 	}
 	
-	get_isosurface(equation_string, x_grid_max, 100, z_w, C, max_iterations, threshold);
+	get_isosurface(equation_string, x_grid_max, 300, z_w, C, max_iterations, threshold);
 
 	const float x_step_size = (x_grid_max - x_grid_min) / (x_res - 1);
 	const float y_step_size = (y_grid_max - y_grid_min) / (y_res - 1);
@@ -400,11 +400,11 @@ void get_points(size_t res)
 
 
 // TODO: fix camera bug where portrait mode crashes.
-void take_screenshot(size_t num_cams_wide, const char *filename, const bool reverse_rows = false)
+void take_screenshot(size_t num_cams_wide, size_t res, const char *filename, const bool reverse_rows = false)
 {
 	screenshot_mode = true;
 
-	get_points(50);
+	get_points(res);
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -439,7 +439,7 @@ void take_screenshot(size_t num_cams_wide, const char *filename, const bool reve
 	draw_control_list = false;
 
 	float temp_outline_width = outline_width;
-	outline_width = 12;
+	outline_width = 6;
 
 	vector<unsigned char> fbpixels(3*win_x*win_y);
 
@@ -778,9 +778,14 @@ void keyboard_func(unsigned char key, int x, int y)
 			draw_control_list = !draw_control_list;
 			break;
 		}
-	case 'l':
+	case 'n':
+	{
+		take_screenshot(8, 10, "screenshot.tga");
+		break;
+	}
+	case 'm':
 		{
-			take_screenshot(8, "screenshot.tga");
+			take_screenshot(8, 50, "screenshot.tga");
 			break;
 		}
 
