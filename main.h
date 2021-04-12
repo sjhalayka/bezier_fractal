@@ -25,13 +25,16 @@ using std::ios;
 #include <sstream>
 using namespace std;
 
+#include <random>
+using std::mt19937;
 
+size_t point_res = 2;
 
 
 
 vector_3 background_colour(1.0, 1.0, 1.0);
 float orange[] = { 1.0f, 0.5f, 0.0f, 1.0f };
-float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.1f };
+float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.5f };
 float mesh_solid[] = { 0.0f, 0.5f, 1.0f, 1.0f };
 
 float outline_width = 3.0;
@@ -48,7 +51,7 @@ uv_camera main_camera;
 
 GLint win_id = 0;
 GLint win_x = 800, win_y = 600;
-float camera_w = 3;
+float camera_w = 12;
 float camera_fov = 45;
 float camera_x_transform = 0;
 float camera_y_transform = 0;
@@ -56,7 +59,7 @@ double u_spacer = 0.01;
 double v_spacer = 0.5*u_spacer;
 double w_spacer = 0.1;
 double camera_near = 0.1;
-double camera_far = 10.0;
+double camera_far = 1000.0;
 
 GLUquadricObj* glu_obj = gluNewQuadric(); // Probably should delete this before app exit... :)
 
@@ -233,9 +236,15 @@ void get_isosurface(const string equation,
 		for (size_t y = 0; y < res; y++, Z.y += step_size)
 		{
 			if (true == make_border && (x == 0 || y == 0 || z == 0 || x == res - 1 || y == res - 1 || z == res - 1))
-				xyplane0[x * res + y] = border_value;
+				xyplane0[x * res + y] = border_value; // 0;
 			else
 				xyplane0[x * res + y] = eqparser.iterate(points, Z, max_iterations, threshold);
+
+			//if (xyplane0[x * res + y] > threshold)
+			//	xyplane0[x * res + y] = 0;
+			//else
+			//	xyplane0[x * res + y] = threshold + 1;
+
 		}
 	}
 
@@ -261,9 +270,14 @@ void get_isosurface(const string equation,
 				vector<vector_4> points;
 
 				if (true == make_border && (x == 0 || y == 0 || z == 0 || x == res - 1 || y == res - 1 || z == res - 1))
-					xyplane1[x * res + y] = border_value;
+					xyplane1[x * res + y] = border_value; // 0;
 				else
 					xyplane1[x * res + y] = eqparser.iterate(points, Z, max_iterations, threshold);
+
+				//if (xyplane1[x * res + y] > threshold)
+				//	xyplane1[x * res + y] = 0;
+				//else
+				//	xyplane1[x * res + y] = threshold + 1;
 			}
 		}
 
@@ -299,12 +313,14 @@ void get_isosurface(const string equation,
 
 void get_points(size_t res)
 {
+	mt19937 mt_rand(0);
+
 	all_4d_points.clear();
 	pos.clear();
 
-	float x_grid_max = 1.5;
-	float y_grid_max = 1.5;
-	float z_grid_max = 1.5;
+	float x_grid_max = 5;
+	float y_grid_max = 5;
+	float z_grid_max = 5;
 	float x_grid_min = -x_grid_max;
 	float y_grid_min = -y_grid_max;
 	float z_grid_min = -z_grid_max;
@@ -315,14 +331,19 @@ void get_points(size_t res)
 
 	float z_w = 0;
 	quaternion C;
-	C.x = 1;
-	C.y = 1;
-	C.z = 1;
-	C.w = 1;
+	C.x = 0.3;
+	C.y = 0.5;
+	C.z = 0.4;
+	C.w = 0.2;
 	unsigned short int max_iterations = 8;
 	float threshold = 4;
 
-	string equation_string = "Z = inverse(sinh(Z)) + C * inverse(sinh(Z))";
+	//string equation_string = "Z = inverse(sinh(Z)) + C * inverse(sinh(Z))";
+	//string equation_string = "Z = exp(Z^2) + C";
+	//string equation_string = "Z = C * (inverse(sinh(Z)) * cosh(Z))";
+	
+	string equation_string = "Z = Z*Z + C";
+	
 	string error_string;
 	quaternion_julia_set_equation_parser eqparser;
 	if (false == eqparser.setup(equation_string, error_string, C))
@@ -349,9 +370,23 @@ void get_points(size_t res)
 		{
 			vector<vector_4> points;
 
-			float length = eqparser.iterate(points, Z, max_iterations, threshold);
+			vertex_3 vertex = vertices[mt_rand()%vertices.size()];
 
-			if (length < threshold)
+			quaternion temp_Z;
+			temp_Z.x = vertex.x * 1.5;
+			temp_Z.y = vertex.y * 1.5;
+			temp_Z.z = vertex.z * 1.5;
+			temp_Z.w = z_w * 1.5;
+
+			float length = eqparser.iterate(points, temp_Z, max_iterations, threshold);
+
+			//float start_length = points[0].length();
+			//float end_length = points[points.size() - 1].length();
+
+			//if (start_length < threshold && end_length < threshold)
+			//	all_4d_points.push_back(points);
+
+			if (length >= threshold)
 			{
 				all_4d_points.push_back(points);
 			}
@@ -373,9 +408,23 @@ void get_points(size_t res)
 			{
 				vector<vector_4> points;
 
-				float length = eqparser.iterate(points, Z, max_iterations, threshold);
+				vertex_3 vertex = vertices[mt_rand() % vertices.size()];
 
-				if (length < threshold)
+				quaternion temp_Z;
+				temp_Z.x = vertex.x * 1.5;
+				temp_Z.y = vertex.y * 1.5;
+				temp_Z.z = vertex.z * 1.5;
+				temp_Z.w = 1.5 * z_w;
+
+				float length = eqparser.iterate(points, temp_Z, max_iterations, threshold);
+
+				//float start_length = points[0].length();
+				//float end_length = points[points.size() - 1].length();
+
+				//if (start_length < threshold && end_length < threshold)
+				//	all_4d_points.push_back(points);
+
+				if (length >= threshold)
 				{
 					all_4d_points.push_back(points);
 				}
@@ -387,7 +436,8 @@ void get_points(size_t res)
 	{
 		vector<vector_4> p;
 
-		for (float t = 0; t <= 0.2f; t += 0.01f)
+		//for (float t = 0; t <= 0.2f; t += 0.01f)
+		for (float t = 0; t <= 1.0f; t += 0.01f)
 		{
 			vector_4 v = getBezierPoint(all_4d_points[i], t);
 			p.push_back(v);
@@ -510,7 +560,7 @@ void take_screenshot(size_t num_cams_wide, size_t res, const char *filename, con
 
 	out.write(reinterpret_cast<char *>(&pixel_data[0]), num_bytes);
 
-	get_points(10);
+	get_points(point_res);
 }
 
 void idle_func(void)
@@ -578,7 +628,7 @@ void init_opengl(const int &width, const int &height)
 
 	main_camera.Set(0, 0, camera_w, camera_fov, win_x, win_y, camera_near, camera_far);
 
-	get_points(10);
+	get_points(point_res);
 
 }
 
@@ -693,6 +743,9 @@ void display_func(void)
 		render_string(10, start + 4*break_size, GLUT_BITMAP_HELVETICA_10, string("L: Take screenshot"));
 
 
+
+
+
 		glPopMatrix();
 		glMatrixMode(GL_PROJECTION);
 		glPopMatrix();
@@ -780,7 +833,7 @@ void keyboard_func(unsigned char key, int x, int y)
 		}
 	case 'n':
 	{
-		take_screenshot(8, 10, "screenshot.tga");
+		take_screenshot(8, point_res, "screenshot.tga");
 		break;
 	}
 	case 'm':
