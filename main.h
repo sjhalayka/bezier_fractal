@@ -28,13 +28,13 @@ using namespace std;
 #include <random>
 using std::mt19937;
 
-size_t point_res = 2;
+size_t point_res = 10;
 
 
 
 vector_3 background_colour(1.0, 1.0, 1.0);
 float orange[] = { 1.0f, 0.5f, 0.0f, 1.0f };
-float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.5f };
+float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.0f };
 float mesh_solid[] = { 0.0f, 0.5f, 1.0f, 1.0f };
 
 float outline_width = 3.0;
@@ -85,6 +85,7 @@ vector<vertex_3> face_normals;
 vector<vertex_3> vertices;
 vector<vertex_3> vertex_normals;
 
+vector<vertex_3> grid_vertices;
 
 vector<vector<vector_4> > all_4d_points;
 vector<vector<vector_4> > pos;
@@ -352,13 +353,15 @@ void get_points(size_t res)
 		return;
 	}
 	
-	get_isosurface(equation_string, x_grid_max, 300, z_w, C, max_iterations, threshold);
+	get_isosurface(equation_string, x_grid_max, 50, z_w, C, max_iterations, threshold);
 
 	const float x_step_size = (x_grid_max - x_grid_min) / (x_res - 1);
 	const float y_step_size = (y_grid_max - y_grid_min) / (y_res - 1);
 	const float z_step_size = (z_grid_max - z_grid_min) / (z_res - 1);
 
 	size_t z = 0;
+
+	grid_vertices.clear();
 
 	quaternion Z(x_grid_min, y_grid_min, z_grid_min, z_w);
 
@@ -370,15 +373,22 @@ void get_points(size_t res)
 		{
 			vector<vector_4> points;
 
-			vertex_3 vertex = vertices[mt_rand()%vertices.size()];
+			vertex_3 v;
+			v.x = Z.x;
+			v.y = Z.y;
+			v.z = Z.z;
 
-			quaternion temp_Z;
-			temp_Z.x = vertex.x * 1.5;
-			temp_Z.y = vertex.y * 1.5;
-			temp_Z.z = vertex.z * 1.5;
-			temp_Z.w = z_w * 1.5;
+			grid_vertices.push_back(v);
 
-			float length = eqparser.iterate(points, temp_Z, max_iterations, threshold);
+			//vertex_3 vertex = vertices[mt_rand()%vertices.size()];
+
+			//quaternion temp_Z;
+			//temp_Z.x = vertex.x * 1.5;
+			//temp_Z.y = vertex.y * 1.5;
+			//temp_Z.z = vertex.z * 1.5;
+			//temp_Z.w = z_w * 1.5;
+
+			float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
 			//float start_length = points[0].length();
 			//float end_length = points[points.size() - 1].length();
@@ -386,9 +396,29 @@ void get_points(size_t res)
 			//if (start_length < threshold && end_length < threshold)
 			//	all_4d_points.push_back(points);
 
-			if (length >= threshold)
+			if (length < threshold)
 			{
 				all_4d_points.push_back(points);
+			}
+			else
+			{
+				for (size_t i = 0; i < points.size(); i++)
+				{
+					vector<vector_4> temp_points;
+
+					quaternion temp_Z;
+					temp_Z.x = points[i].x;
+					temp_Z.y = points[i].y;
+					temp_Z.z = points[i].z;
+					temp_Z.w = points[i].w;
+
+					float length = eqparser.iterate(temp_points, temp_Z, max_iterations, threshold);
+
+					if (length < threshold)
+					{
+						cout << "uh oh" << endl;
+					}
+				}
 			}
 		}
 	}
@@ -408,15 +438,24 @@ void get_points(size_t res)
 			{
 				vector<vector_4> points;
 
-				vertex_3 vertex = vertices[mt_rand() % vertices.size()];
+				//vertex_3 vertex = vertices[mt_rand() % vertices.size()];
 
-				quaternion temp_Z;
-				temp_Z.x = vertex.x * 1.5;
-				temp_Z.y = vertex.y * 1.5;
-				temp_Z.z = vertex.z * 1.5;
-				temp_Z.w = 1.5 * z_w;
+				//quaternion temp_Z;
+				//temp_Z.x = vertex.x * 1.5;
+				//temp_Z.y = vertex.y * 1.5;
+				//temp_Z.z = vertex.z * 1.5;
+				//temp_Z.w = 1.5 * z_w;
 
-				float length = eqparser.iterate(points, temp_Z, max_iterations, threshold);
+
+				vertex_3 v;
+				v.x = Z.x;
+				v.y = Z.y;
+				v.z = Z.z;
+
+				grid_vertices.push_back(v);
+
+
+				float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
 				//float start_length = points[0].length();
 				//float end_length = points[points.size() - 1].length();
@@ -424,9 +463,29 @@ void get_points(size_t res)
 				//if (start_length < threshold && end_length < threshold)
 				//	all_4d_points.push_back(points);
 
-				if (length >= threshold)
+				if (length < threshold)
 				{
 					all_4d_points.push_back(points);
+				}
+				else
+				{
+					for (size_t i = 0; i < points.size(); i++)
+					{
+						vector<vector_4> temp_points;
+
+						quaternion temp_Z;
+						temp_Z.x = points[i].x;
+						temp_Z.y = points[i].y;
+						temp_Z.z = points[i].z;
+						temp_Z.w = points[i].w;
+
+						float length = eqparser.iterate(temp_points, temp_Z, max_iterations, threshold);
+
+						if (length < threshold)
+						{
+							cout << "uh oh" << endl;
+						}
+					}
 				}
 			}
 		}
@@ -1071,7 +1130,13 @@ void draw_objects(bool disable_colouring)
 
 
 
-
+	//for (size_t i = 0; i < grid_vertices.size(); i++)
+	//{
+	//	glPushMatrix();
+	//	glTranslatef(grid_vertices[i].x, grid_vertices[i].y, grid_vertices[i].z);
+	//	glutSolidSphere(0.025, 16, 16);
+	//	glPopMatrix();
+	//}
 
 
 
