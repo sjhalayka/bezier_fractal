@@ -34,7 +34,7 @@ size_t point_res = 10;
 
 vector_3 background_colour(1.0, 1.0, 1.0);
 float orange[] = { 1.0f, 0.5f, 0.0f, 1.0f };
-float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.0f };
+float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.5f };
 float mesh_solid[] = { 0.0f, 0.5f, 1.0f, 1.0f };
 
 float outline_width = 3.0;
@@ -373,52 +373,11 @@ void get_points(size_t res)
 		{
 			vector<vector_4> points;
 
-			vertex_3 v;
-			v.x = Z.x;
-			v.y = Z.y;
-			v.z = Z.z;
-
-			grid_vertices.push_back(v);
-
-			//vertex_3 vertex = vertices[mt_rand()%vertices.size()];
-
-			//quaternion temp_Z;
-			//temp_Z.x = vertex.x * 1.5;
-			//temp_Z.y = vertex.y * 1.5;
-			//temp_Z.z = vertex.z * 1.5;
-			//temp_Z.w = z_w * 1.5;
-
 			float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
-			//float start_length = points[0].length();
-			//float end_length = points[points.size() - 1].length();
-
-			//if (start_length < threshold && end_length < threshold)
-			//	all_4d_points.push_back(points);
-
-			if (length < threshold)
+			if (length > threshold)
 			{
 				all_4d_points.push_back(points);
-			}
-			else
-			{
-				for (size_t i = 0; i < points.size(); i++)
-				{
-					vector<vector_4> temp_points;
-
-					quaternion temp_Z;
-					temp_Z.x = points[i].x;
-					temp_Z.y = points[i].y;
-					temp_Z.z = points[i].z;
-					temp_Z.w = points[i].w;
-
-					float length = eqparser.iterate(temp_points, temp_Z, max_iterations, threshold);
-
-					if (length < threshold)
-					{
-						cout << "uh oh" << endl;
-					}
-				}
 			}
 		}
 	}
@@ -438,54 +397,11 @@ void get_points(size_t res)
 			{
 				vector<vector_4> points;
 
-				//vertex_3 vertex = vertices[mt_rand() % vertices.size()];
-
-				//quaternion temp_Z;
-				//temp_Z.x = vertex.x * 1.5;
-				//temp_Z.y = vertex.y * 1.5;
-				//temp_Z.z = vertex.z * 1.5;
-				//temp_Z.w = 1.5 * z_w;
-
-
-				vertex_3 v;
-				v.x = Z.x;
-				v.y = Z.y;
-				v.z = Z.z;
-
-				grid_vertices.push_back(v);
-
-
 				float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
-				//float start_length = points[0].length();
-				//float end_length = points[points.size() - 1].length();
-
-				//if (start_length < threshold && end_length < threshold)
-				//	all_4d_points.push_back(points);
-
-				if (length < threshold)
+				if (length > threshold)
 				{
 					all_4d_points.push_back(points);
-				}
-				else
-				{
-					for (size_t i = 0; i < points.size(); i++)
-					{
-						vector<vector_4> temp_points;
-
-						quaternion temp_Z;
-						temp_Z.x = points[i].x;
-						temp_Z.y = points[i].y;
-						temp_Z.z = points[i].z;
-						temp_Z.w = points[i].w;
-
-						float length = eqparser.iterate(temp_points, temp_Z, max_iterations, threshold);
-
-						if (length < threshold)
-						{
-							cout << "uh oh" << endl;
-						}
-					}
 				}
 			}
 		}
@@ -1142,11 +1058,39 @@ void draw_objects(bool disable_colouring)
 
 	if (draw_curves)
 	{
+		mt19937 mt_rand(12345678);
+
+		vector<size_t> indices;
+
+		while(indices.size() < 4)
+		{
+			size_t rand_index = mt_rand() % pos.size();
+
+			vector_4 z(0, 0, 1, 0);
+
+			if (z.dot(pos[rand_index][0]) >= 0 && pos[rand_index][0].length() < 2)
+				indices.push_back(rand_index);
+		}
+
 		if (false == disable_colouring)
 			glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
 
 		for (size_t i = 0; i < pos.size(); i++)
 		{
+			bool found_match = false;
+
+			for (size_t j = 0; j < indices.size(); j++)
+			{
+				if (indices[j] == i)
+				{
+					found_match = true;
+					break;
+				}
+			}
+
+			if (false == found_match)
+				continue;
+
 			for (size_t j = 0; j < pos[i].size() - 1; j++)
 			{
 				double t = j / static_cast<double>(pos[i].size() - 1);
@@ -1176,7 +1120,6 @@ void draw_objects(bool disable_colouring)
 
 				glRotatef(yaw * rad_to_deg, 0.0f, 1.0f, 0.0f);
 				glRotatef(pitch * rad_to_deg, 1.0f, 0.0f, 0.0f);
-
 
 				if (j == 0)
 					glutSolidSphere(0.005 * 1.5, 16, 16);
