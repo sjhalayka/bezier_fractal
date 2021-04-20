@@ -15,6 +15,8 @@ using namespace marching_cubes;
 
 #include "eqparse.h"
 
+#include "mesh.h"
+
 #include <fstream>
 using std::ofstream;
 
@@ -28,7 +30,7 @@ using namespace std;
 #include <random>
 using std::mt19937;
 
-size_t point_res = 10;
+size_t point_res = 50;
 
 
 
@@ -37,13 +39,15 @@ float orange[] = { 1.0f, 0.5f, 0.0f, 1.0f };
 float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.5f };
 float mesh_solid[] = { 0.0f, 0.5f, 1.0f, 1.0f };
 
+float sphere_transparent[] = { 0.0f, 0.5f, 1.0f, 0.2f };
+
 float outline_width = 3.0;
 static const float outline_colour[] = {0.0, 0.0, 0.0};
 
 bool draw_curves = true;
 bool draw_mesh = true;
 bool draw_outline = true;
-bool draw_axis = true;
+bool draw_axis = false;
 bool draw_control_list = true;
 bool screenshot_mode = false;
 
@@ -85,7 +89,14 @@ vector<vertex_3> face_normals;
 vector<vertex_3> vertices;
 vector<vertex_3> vertex_normals;
 
-vector<vertex_3> grid_vertices;
+vector<triangle> sphere_tris;
+vector<vertex_3> sphere_face_normals;
+vector<vertex_3> sphere_vertices;
+vector<vertex_3> sphere_vertex_normals;
+
+
+
+//vector<vertex_3> grid_vertices;
 
 vector<vector<vector_4> > all_4d_points;
 vector<vector<vector_4> > pos;
@@ -113,86 +124,6 @@ vector_4 getBezierPoint(vector<vector_4> points, float t)
 }
 
 
-void get_vertices_and_normals_from_triangles(vector<triangle>& t, vector<vertex_3>& fn, vector<vertex_3>& v, vector<vertex_3>& vn)
-{
-	fn.clear();
-	v.clear();
-	vn.clear();
-
-	if (0 == t.size())
-		return;
-
-	cout << "Triangles: " << t.size() << endl;
-
-	cout << "Welding vertices" << endl;
-
-	// Insert unique vertices into set.
-	set<vertex_3> vertex_set;
-
-	for (vector<triangle>::const_iterator i = t.begin(); i != t.end(); i++)
-	{
-		vertex_set.insert(i->vertex[0]);
-		vertex_set.insert(i->vertex[1]);
-		vertex_set.insert(i->vertex[2]);
-	}
-
-	cout << "Vertices: " << vertex_set.size() << endl;
-
-	cout << "Generating vertex indices" << endl;
-
-	// Add indices to the vertices.
-	for (set<vertex_3>::const_iterator i = vertex_set.begin(); i != vertex_set.end(); i++)
-	{
-		size_t index = v.size();
-		v.push_back(*i);
-		v[index].index = index;
-	}
-
-	vertex_set.clear();
-
-	// Re-insert modifies vertices into set.
-	for (vector<vertex_3>::const_iterator i = v.begin(); i != v.end(); i++)
-		vertex_set.insert(*i);
-
-	cout << "Assigning vertex indices to triangles" << endl;
-
-	// Find the three vertices for each triangle, by index.
-	set<vertex_3>::iterator find_iter;
-
-	for (vector<triangle>::iterator i = t.begin(); i != t.end(); i++)
-	{
-		find_iter = vertex_set.find(i->vertex[0]);
-		i->vertex[0].index = find_iter->index;
-
-		find_iter = vertex_set.find(i->vertex[1]);
-		i->vertex[1].index = find_iter->index;
-
-		find_iter = vertex_set.find(i->vertex[2]);
-		i->vertex[2].index = find_iter->index;
-	}
-
-	vertex_set.clear();
-
-	cout << "Calculating normals" << endl;
-	fn.resize(t.size());
-	vn.resize(v.size());
-
-	for (size_t i = 0; i < t.size(); i++)
-	{
-		vertex_3 v0 = t[i].vertex[1] - t[i].vertex[0];
-		vertex_3 v1 = t[i].vertex[2] - t[i].vertex[0];
-		fn[i] = v0.cross(v1);
-		fn[i].normalize();
-
-		vn[t[i].vertex[0].index] = vn[t[i].vertex[0].index] + fn[i];
-		vn[t[i].vertex[1].index] = vn[t[i].vertex[1].index] + fn[i];
-		vn[t[i].vertex[2].index] = vn[t[i].vertex[2].index] + fn[i];
-	}
-
-	for (size_t i = 0; i < vn.size(); i++)
-		vn[i].normalize();
-}
-
 
 void get_isosurface(const string equation, 
 	const float grid_max, 
@@ -202,6 +133,10 @@ void get_isosurface(const string equation,
 	const unsigned short int max_iterations,
 	const float threshold)
 {
+	read_triangles_from_binary_stereo_lithography_file(sphere_tris, "sphere.stl");
+	get_vertices_and_normals_from_triangles(sphere_tris, sphere_face_normals, sphere_vertices, sphere_vertex_normals);
+
+
 	const float grid_min = -grid_max;
 
 	const bool make_border = true;
@@ -361,7 +296,7 @@ void get_points(size_t res)
 
 	size_t z = 0;
 
-	grid_vertices.clear();
+//	grid_vertices.clear();
 
 	quaternion Z(x_grid_min, y_grid_min, z_grid_min, z_w);
 
@@ -375,7 +310,7 @@ void get_points(size_t res)
 
 			float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
-			if (length > threshold)
+			if (length < threshold)
 			{
 				all_4d_points.push_back(points);
 			}
@@ -399,7 +334,7 @@ void get_points(size_t res)
 
 				float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
-				if (length > threshold)
+				if (length < threshold)
 				{
 					all_4d_points.push_back(points);
 				}
@@ -766,6 +701,29 @@ void display_func(void)
 
 	glEnd();
 
+
+
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, sphere_transparent);
+
+	glBegin(GL_TRIANGLES);
+
+	for (size_t i = 0; i < sphere_tris.size(); i++)
+	{
+		size_t v_index0 = sphere_tris[i].vertex[0].index;
+		size_t v_index1 = sphere_tris[i].vertex[1].index;
+		size_t v_index2 = sphere_tris[i].vertex[2].index;
+
+		glNormal3f(sphere_vertex_normals[v_index0].x, sphere_vertex_normals[v_index0].y, sphere_vertex_normals[v_index0].z);
+		glVertex3f(sphere_vertices[v_index0].x, sphere_vertices[v_index0].y, sphere_vertices[v_index0].z);
+		glNormal3f(sphere_vertex_normals[v_index1].x, sphere_vertex_normals[v_index1].y, sphere_vertex_normals[v_index1].z);
+		glVertex3f(sphere_vertices[v_index1].x, sphere_vertices[v_index1].y, sphere_vertices[v_index1].z);
+		glNormal3f(sphere_vertex_normals[v_index2].x, sphere_vertex_normals[v_index2].y, sphere_vertex_normals[v_index2].z);
+		glVertex3f(sphere_vertices[v_index2].x, sphere_vertices[v_index2].y, sphere_vertices[v_index2].z);
+	}
+
+	glEnd();
+
+
 	glDisable(GL_BLEND);
 	glDisable(GL_ALPHA);
 
@@ -1058,39 +1016,11 @@ void draw_objects(bool disable_colouring)
 
 	if (draw_curves)
 	{
-		mt19937 mt_rand(12345678);
-
-		vector<size_t> indices;
-
-		while(indices.size() < 4)
-		{
-			size_t rand_index = mt_rand() % pos.size();
-
-			vector_4 z(0, 0, 1, 0);
-
-			if (z.dot(pos[rand_index][0]) >= 0 && pos[rand_index][0].length() < 2)
-				indices.push_back(rand_index);
-		}
-
 		if (false == disable_colouring)
 			glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
 
 		for (size_t i = 0; i < pos.size(); i++)
 		{
-			bool found_match = false;
-
-			for (size_t j = 0; j < indices.size(); j++)
-			{
-				if (indices[j] == i)
-				{
-					found_match = true;
-					break;
-				}
-			}
-
-			if (false == found_match)
-				continue;
-
 			for (size_t j = 0; j < pos[i].size() - 1; j++)
 			{
 				double t = j / static_cast<double>(pos[i].size() - 1);
@@ -1159,6 +1089,12 @@ void draw_objects(bool disable_colouring)
 
 		glEnd();
 	}
+
+
+
+
+
+
 
 	glDisable(GL_LIGHTING);
 
