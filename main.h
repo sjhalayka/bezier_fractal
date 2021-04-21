@@ -1,4 +1,4 @@
-// Shawn Halayka -- shalayka@gmail.com
+﻿// Shawn Halayka -- shalayka@gmail.com
 // June 26, 2010
 //
 // This code and data is in the public domain.
@@ -30,7 +30,7 @@ using namespace std;
 #include <random>
 using std::mt19937;
 
-size_t point_res = 50;
+size_t point_res = 2;
 
 
 
@@ -102,7 +102,7 @@ vector<vector<vector_4> > all_4d_points;
 vector<vector<vector_4> > pos;
 
 
-// https://stackoverflow.com/questions/785097/how-do-i-implement-a-b�zier-curve-in-c
+// https://stackoverflow.com/questions/785097/how-do-i-implement-a-bézier-curve-in-c
 vector_4 getBezierPoint(vector<vector_4> points, float t)
 {
 	int i = points.size() - 1;
@@ -249,7 +249,7 @@ void get_isosurface(const string equation,
 
 void get_points(size_t res)
 {
-	mt19937 mt_rand(0);
+	mt19937 mt_rand(1234567);
 
 	all_4d_points.clear();
 	pos.clear();
@@ -288,7 +288,7 @@ void get_points(size_t res)
 		return;
 	}
 	
-	get_isosurface(equation_string, x_grid_max, 50, z_w, C, max_iterations, threshold);
+	get_isosurface(equation_string, x_grid_max, 300, z_w, C, max_iterations, threshold);
 
 	const float x_step_size = (x_grid_max - x_grid_min) / (x_res - 1);
 	const float y_step_size = (y_grid_max - y_grid_min) / (y_res - 1);
@@ -307,11 +307,19 @@ void get_points(size_t res)
 		for (size_t y = 0; y < y_res; y++, Z.y += y_step_size)
 		{
 			vector<vector_4> points;
+			vertex_3 vertex = vertices[mt_rand() % vertices.size()];
 
-			float length = eqparser.iterate(points, Z, max_iterations, threshold);
+			quaternion temp_Z;
+			temp_Z.x = vertex.x * 1.5;
+			temp_Z.y = vertex.y * 1.5;
+			temp_Z.z = vertex.z * 1.5;
+			temp_Z.w = 1.5 * z_w;
 
-			if (length < threshold)
+			float length = eqparser.iterate(points, temp_Z, max_iterations, threshold);
+
+			if (length > threshold)
 			{
+				if(all_4d_points.size() < 2)
 				all_4d_points.push_back(points);
 			}
 		}
@@ -332,10 +340,19 @@ void get_points(size_t res)
 			{
 				vector<vector_4> points;
 
-				float length = eqparser.iterate(points, Z, max_iterations, threshold);
+				vertex_3 vertex = vertices[mt_rand() % vertices.size()];
 
-				if (length < threshold)
+				quaternion temp_Z;
+				temp_Z.x = vertex.x * 1.5;
+				temp_Z.y = vertex.y * 1.5;
+				temp_Z.z = vertex.z * 1.5;
+				temp_Z.w = 1.5 * z_w;
+
+				float length = eqparser.iterate(points, temp_Z, max_iterations, threshold);
+
+				if (length > threshold)
 				{
+					if (all_4d_points.size() < 2)
 					all_4d_points.push_back(points);
 				}
 			}
@@ -347,7 +364,7 @@ void get_points(size_t res)
 		vector<vector_4> p;
 
 		//for (float t = 0; t <= 0.2f; t += 0.01f)
-		for (float t = 0; t <= 1.0f; t += 0.01f)
+		for (float t = 0; t <= 0.85f; t += 0.01f)
 		{
 			vector_4 v = getBezierPoint(all_4d_points[i], t);
 			p.push_back(v);
