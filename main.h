@@ -30,13 +30,13 @@ using namespace std;
 #include <random>
 using std::mt19937;
 
-size_t point_res = 2;
+size_t point_res = 10;
 
 
 
 vector_3 background_colour(1.0, 1.0, 1.0);
 float orange[] = { 1.0f, 0.5f, 0.0f, 1.0f };
-float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.5f };
+float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.1f };
 float mesh_solid[] = { 0.0f, 0.5f, 1.0f, 1.0f };
 
 float sphere_transparent[] = { 0.0f, 0.5f, 1.0f, 0.2f };
@@ -45,9 +45,9 @@ float outline_width = 3.0;
 static const float outline_colour[] = {0.0, 0.0, 0.0};
 
 bool draw_curves = true;
-bool draw_mesh = true;
+bool draw_mesh = false;
 bool draw_outline = true;
-bool draw_axis = false;
+bool draw_axis = true;
 bool draw_control_list = true;
 bool screenshot_mode = false;
 
@@ -55,7 +55,7 @@ uv_camera main_camera;
 
 GLint win_id = 0;
 GLint win_x = 800, win_y = 600;
-float camera_w = 12;
+float camera_w = 4;
 float camera_fov = 45;
 float camera_x_transform = 0;
 float camera_y_transform = 0;
@@ -133,8 +133,8 @@ void get_isosurface(const string equation,
 	const unsigned short int max_iterations,
 	const float threshold)
 {
-	read_triangles_from_binary_stereo_lithography_file(sphere_tris, "sphere.stl");
-	get_vertices_and_normals_from_triangles(sphere_tris, sphere_face_normals, sphere_vertices, sphere_vertex_normals);
+//	read_triangles_from_binary_stereo_lithography_file(sphere_tris, "sphere.stl");
+//	get_vertices_and_normals_from_triangles(sphere_tris, sphere_face_normals, sphere_vertices, sphere_vertex_normals);
 
 
 	const float grid_min = -grid_max;
@@ -254,9 +254,9 @@ void get_points(size_t res)
 	all_4d_points.clear();
 	pos.clear();
 
-	float x_grid_max = 5;
-	float y_grid_max = 5;
-	float z_grid_max = 5;
+	float x_grid_max = 1.5;
+	float y_grid_max = 1.5;
+	float z_grid_max = 1.5;
 	float x_grid_min = -x_grid_max;
 	float y_grid_min = -y_grid_max;
 	float z_grid_min = -z_grid_max;
@@ -267,9 +267,9 @@ void get_points(size_t res)
 
 	float z_w = 0;
 	quaternion C;
-	C.x = 0.3;
+	C.x = -0.3;
 	C.y = 0.5;
-	C.z = 0.4;
+	C.z = 0.7;
 	C.w = 0.2;
 	unsigned short int max_iterations = 8;
 	float threshold = 4;
@@ -307,19 +307,11 @@ void get_points(size_t res)
 		for (size_t y = 0; y < y_res; y++, Z.y += y_step_size)
 		{
 			vector<vector_4> points;
-			vertex_3 vertex = vertices[mt_rand() % vertices.size()];
 
-			quaternion temp_Z;
-			temp_Z.x = vertex.x * 1.5;
-			temp_Z.y = vertex.y * 1.5;
-			temp_Z.z = vertex.z * 1.5;
-			temp_Z.w = 1.5 * z_w;
+			float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
-			float length = eqparser.iterate(points, temp_Z, max_iterations, threshold);
-
-			if (length > threshold)
+			if (length < threshold)
 			{
-				if(all_4d_points.size() < 2)
 				all_4d_points.push_back(points);
 			}
 		}
@@ -340,19 +332,10 @@ void get_points(size_t res)
 			{
 				vector<vector_4> points;
 
-				vertex_3 vertex = vertices[mt_rand() % vertices.size()];
+				float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
-				quaternion temp_Z;
-				temp_Z.x = vertex.x * 1.5;
-				temp_Z.y = vertex.y * 1.5;
-				temp_Z.z = vertex.z * 1.5;
-				temp_Z.w = 1.5 * z_w;
-
-				float length = eqparser.iterate(points, temp_Z, max_iterations, threshold);
-
-				if (length > threshold)
+				if (length < threshold)
 				{
-					if (all_4d_points.size() < 2)
 					all_4d_points.push_back(points);
 				}
 			}
@@ -363,8 +346,8 @@ void get_points(size_t res)
 	{
 		vector<vector_4> p;
 
-		//for (float t = 0; t <= 0.2f; t += 0.01f)
-		for (float t = 0; t <= 0.85f; t += 0.01f)
+		for (float t = 0; t <= 0.2f; t += 0.01f)
+		//for (float t = 0; t <= 0.85f; t += 0.01f)
 		{
 			vector_4 v = getBezierPoint(all_4d_points[i], t);
 			p.push_back(v);
@@ -720,29 +703,29 @@ void display_func(void)
 
 
 
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, sphere_transparent);
+	//glMaterialfv(GL_FRONT, GL_DIFFUSE, sphere_transparent);
 
-	glBegin(GL_TRIANGLES);
+	//glBegin(GL_TRIANGLES);
 
-	for (size_t i = 0; i < sphere_tris.size(); i++)
-	{
-		size_t v_index0 = sphere_tris[i].vertex[0].index;
-		size_t v_index1 = sphere_tris[i].vertex[1].index;
-		size_t v_index2 = sphere_tris[i].vertex[2].index;
+	//for (size_t i = 0; i < sphere_tris.size(); i++)
+	//{
+	//	size_t v_index0 = sphere_tris[i].vertex[0].index;
+	//	size_t v_index1 = sphere_tris[i].vertex[1].index;
+	//	size_t v_index2 = sphere_tris[i].vertex[2].index;
 
-		glNormal3f(sphere_vertex_normals[v_index0].x, sphere_vertex_normals[v_index0].y, sphere_vertex_normals[v_index0].z);
-		glVertex3f(sphere_vertices[v_index0].x, sphere_vertices[v_index0].y, sphere_vertices[v_index0].z);
-		glNormal3f(sphere_vertex_normals[v_index1].x, sphere_vertex_normals[v_index1].y, sphere_vertex_normals[v_index1].z);
-		glVertex3f(sphere_vertices[v_index1].x, sphere_vertices[v_index1].y, sphere_vertices[v_index1].z);
-		glNormal3f(sphere_vertex_normals[v_index2].x, sphere_vertex_normals[v_index2].y, sphere_vertex_normals[v_index2].z);
-		glVertex3f(sphere_vertices[v_index2].x, sphere_vertices[v_index2].y, sphere_vertices[v_index2].z);
-	}
+	//	glNormal3f(sphere_vertex_normals[v_index0].x, sphere_vertex_normals[v_index0].y, sphere_vertex_normals[v_index0].z);
+	//	glVertex3f(sphere_vertices[v_index0].x, sphere_vertices[v_index0].y, sphere_vertices[v_index0].z);
+	//	glNormal3f(sphere_vertex_normals[v_index1].x, sphere_vertex_normals[v_index1].y, sphere_vertex_normals[v_index1].z);
+	//	glVertex3f(sphere_vertices[v_index1].x, sphere_vertices[v_index1].y, sphere_vertices[v_index1].z);
+	//	glNormal3f(sphere_vertex_normals[v_index2].x, sphere_vertex_normals[v_index2].y, sphere_vertex_normals[v_index2].z);
+	//	glVertex3f(sphere_vertices[v_index2].x, sphere_vertices[v_index2].y, sphere_vertices[v_index2].z);
+	//}
 
-	glEnd();
+	//glEnd();
 
 
-	glDisable(GL_BLEND);
-	glDisable(GL_ALPHA);
+	//glDisable(GL_BLEND);
+	//glDisable(GL_ALPHA);
 
 
 	if (false == screenshot_mode)
@@ -1080,6 +1063,52 @@ void draw_objects(bool disable_colouring)
 			}
 
 		}
+
+
+		//for (size_t i = 0; i < all_4d_points.size(); i++)
+		//{
+		//	for (size_t j = 0; j < all_4d_points[i].size() - 1; j++)
+		//	{
+		//		double t = j / static_cast<double>(all_4d_points[i].size() - 1);
+
+		//		RGB rgb = HSBtoRGB(static_cast<unsigned short>(300.f * t), 75, 100);
+
+		//		float colour[] = { rgb.r / 255.0f, rgb.g / 255.0f, rgb.b / 255.0f, 1.0f };
+
+		//		glMaterialfv(GL_FRONT, GL_DIFFUSE, colour);
+
+		//		vector_4 line = all_4d_points[i][j + 1] - all_4d_points[i][j];
+
+		//		glPushMatrix();
+		//		glTranslatef(static_cast<float>(all_4d_points[i][j].x), static_cast<float>(all_4d_points[i][j].y), static_cast<float>(all_4d_points[i][j].z));
+
+		//		float line_len = static_cast<float>(line.length());
+		//		line.normalize();
+
+		//		float yaw = 0.0f;
+
+		//		if (fabsf(static_cast<float>(line.x)) < 0.00001f && fabsf(static_cast<float>(line.z)) < 0.00001f)
+		//			yaw = 0.0f;
+		//		else
+		//			yaw = atan2f(static_cast<float>(line.x), static_cast<float>(line.z));
+
+		//		float pitch = -atan2f(static_cast<float>(line.y), static_cast<float>(sqrt(line.x * line.x + line.z * line.z)));
+
+		//		glRotatef(yaw * rad_to_deg, 0.0f, 1.0f, 0.0f);
+		//		glRotatef(pitch * rad_to_deg, 1.0f, 0.0f, 0.0f);
+
+		//		if (j == 0)
+		//			glutSolidSphere(0.005 * 1.5, 16, 16);
+
+		//		if (j < all_4d_points[i].size() - 2)
+		//			gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
+		//		else
+		//			glutSolidCone(0.005 * 4, 0.005 * 8, 20, 20);
+
+		//		glPopMatrix();
+		//	}
+
+		//}
 
 	}
 
