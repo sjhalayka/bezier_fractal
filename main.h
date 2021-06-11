@@ -195,7 +195,7 @@ void get_isosurface(const string equation,
 	{
 		Z.x = grid_min;
 
-		cout << "Calculating triangles from xy-plane pair " << z << " of " << res - 1 << endl;
+//		cout << "Calculating triangles from xy-plane pair " << z << " of " << res - 1 << endl;
 
 		for (size_t x = 0; x < res; x++, Z.x += step_size)
 		{
@@ -267,9 +267,9 @@ void get_points(size_t res)
 
 	float z_w = 0;
 	quaternion C;
-	C.x = -0.3;
+	C.x = 0.3;
 	C.y = 0.5;
-	C.z = 0.7;
+	C.z = 0.4;
 	C.w = 0.2;
 	unsigned short int max_iterations = 8;
 	float threshold = 4;
@@ -288,7 +288,7 @@ void get_points(size_t res)
 		return;
 	}
 	
-	get_isosurface(equation_string, x_grid_max, 300, z_w, C, max_iterations, threshold);
+	get_isosurface(equation_string, x_grid_max, 50, z_w, C, max_iterations, threshold);
 
 	const float x_step_size = (x_grid_max - x_grid_min) / (x_res - 1);
 	const float y_step_size = (y_grid_max - y_grid_min) / (y_res - 1);
@@ -341,6 +341,25 @@ void get_points(size_t res)
 			}
 		}
 	}
+
+	cout << "trajectory count " << all_4d_points.size() << endl;
+
+	size_t orbit_count = 0;
+
+	for (size_t i = 0; i < all_4d_points.size(); i++)
+	{
+		set<vector_4> point_set;
+
+		for (size_t j = 0; j < all_4d_points[i].size(); j++)
+		{
+			point_set.insert(all_4d_points[i][j]);
+		}
+
+		if (point_set.size() != all_4d_points[i].size())
+			orbit_count++;
+	}
+
+	cout << "orbit count " << orbit_count << endl;
 
 	for (size_t i = 0; i < all_4d_points.size(); i++)
 	{
