@@ -1060,55 +1060,55 @@ void draw_objects(bool disable_colouring)
 
 
 
-	//if (draw_curves)
-	//{
-	//	if (false == disable_colouring)
-	//		glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
+	if (draw_curves)
+	{
+		if (false == disable_colouring)
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
 
-	//	for (size_t i = 0; i < pos.size(); i++)
-	//	{
-	//		for (size_t j = 0; j < pos[i].size() - 1; j++)
-	//		{
-	//			double t = j / static_cast<double>(pos[i].size() - 1);
+		for (size_t i = 0; i < pos.size(); i++)
+		{
+			for (size_t j = 0; j < pos[i].size() - 1; j++)
+			{
+				double t = j / static_cast<double>(pos[i].size() - 1);
 
-	//			RGB rgb = HSBtoRGB(static_cast<unsigned short>(300.f * t), 75, 100);
+				RGB rgb = HSBtoRGB(static_cast<unsigned short>(300.f * t), 75, 100);
 
-	//			float colour[] = { rgb.r / 255.0f, rgb.g / 255.0f, rgb.b / 255.0f, 1.0f };
+				float colour[] = { rgb.r / 255.0f, rgb.g / 255.0f, rgb.b / 255.0f, 1.0f };
 
-	//			glMaterialfv(GL_FRONT, GL_DIFFUSE, colour);
+				glMaterialfv(GL_FRONT, GL_DIFFUSE, colour);
 
-	//			vector_4 line = pos[i][j + 1] - pos[i][j];
+				vector_4 line = pos[i][j + 1] - pos[i][j];
 
-	//			glPushMatrix();
-	//			glTranslatef(static_cast<float>(pos[i][j].x), static_cast<float>(pos[i][j].y), static_cast<float>(pos[i][j].z));
+				glPushMatrix();
+				glTranslatef(static_cast<float>(pos[i][j].x), static_cast<float>(pos[i][j].y), static_cast<float>(pos[i][j].z));
 
-	//			float line_len = static_cast<float>(line.length());
-	//			line.normalize();
+				float line_len = static_cast<float>(line.length());
+				line.normalize();
 
-	//			float yaw = 0.0f;
+				float yaw = 0.0f;
 
-	//			if (fabsf(static_cast<float>(line.x)) < 0.00001f && fabsf(static_cast<float>(line.z)) < 0.00001f)
-	//				yaw = 0.0f;
-	//			else
-	//				yaw = atan2f(static_cast<float>(line.x), static_cast<float>(line.z));
+				if (fabsf(static_cast<float>(line.x)) < 0.00001f && fabsf(static_cast<float>(line.z)) < 0.00001f)
+					yaw = 0.0f;
+				else
+					yaw = atan2f(static_cast<float>(line.x), static_cast<float>(line.z));
 
-	//			float pitch = -atan2f(static_cast<float>(line.y), static_cast<float>(sqrt(line.x * line.x + line.z * line.z)));
+				float pitch = -atan2f(static_cast<float>(line.y), static_cast<float>(sqrt(line.x * line.x + line.z * line.z)));
 
-	//			glRotatef(yaw * rad_to_deg, 0.0f, 1.0f, 0.0f);
-	//			glRotatef(pitch * rad_to_deg, 1.0f, 0.0f, 0.0f);
+				glRotatef(yaw * rad_to_deg, 0.0f, 1.0f, 0.0f);
+				glRotatef(pitch * rad_to_deg, 1.0f, 0.0f, 0.0f);
 
-	//			if (j == 0)
-	//				glutSolidSphere(0.005 * 1.5, 16, 16);
+				if (j == 0)
+					glutSolidSphere(0.005 * 1.5, 16, 16);
 
-	//			if (j < pos[i].size() - 2)
-	//				gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
-	//			else
-	//				glutSolidCone(0.005 * 4, 0.005 * 8, 20, 20);
+				if (j < pos[i].size() - 2)
+					gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
+				else
+					glutSolidCone(0.005 * 4, 0.005 * 8, 20, 20);
 
-	//			glPopMatrix();
-	//		}
+				glPopMatrix();
+			}
 
-	//	}
+		}
 
 
 		//for (size_t i = 0; i < all_4d_points.size(); i++)
@@ -1156,7 +1156,7 @@ void draw_objects(bool disable_colouring)
 
 		//}
 
-	//}
+	}
 
 
 	if (draw_mesh)
