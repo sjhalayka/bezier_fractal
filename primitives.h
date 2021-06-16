@@ -99,7 +99,7 @@ public:
 
 	inline const float length(void)
 	{
-		return std::sqrt(self_dot());
+		return std::sqrtf(self_dot());
 	}
 
 	inline const void normalize(void)

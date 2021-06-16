@@ -133,9 +133,6 @@ void get_isosurface(const string equation,
 	const unsigned short int max_iterations,
 	const float threshold)
 {
-//	read_triangles_from_binary_stereo_lithography_file(sphere_tris, "sphere.stl");
-//	get_vertices_and_normals_from_triangles(sphere_tris, sphere_face_normals, sphere_vertices, sphere_vertex_normals);
-
 
 	const float grid_min = -grid_max;
 
@@ -195,7 +192,7 @@ void get_isosurface(const string equation,
 	{
 		Z.x = grid_min;
 
-//		cout << "Calculating triangles from xy-plane pair " << z << " of " << res - 1 << endl;
+		cout << "Calculating triangles from xy-plane pair " << z << " of " << res - 1 << endl;
 
 		for (size_t x = 0; x < res; x++, Z.x += step_size)
 		{
@@ -235,12 +232,42 @@ void get_isosurface(const string equation,
 	cout << endl;
 
 
-	if(tris.size() > 0)
+
+
+
+	if (tris.size() > 0)
+	{
+		float total_volume = 0;
+		float total_area = 0;
+
+		for (size_t i = 0; i < tris.size(); i++)
+		{
+			vertex_3 a = tris[i].vertex[0];
+			vertex_3 b = tris[i].vertex[1];
+			vertex_3 c = tris[i].vertex[2];
+
+			total_volume += a.dot(b.cross(c)) / 6.0f;
+
+
+			vertex_3 a2 = tris[i].vertex[1] - tris[i].vertex[0];
+			vertex_3 b2 = tris[i].vertex[2] - tris[i].vertex[0];
+			vertex_3 c2 = a2.cross(b2);
+
+			total_area += c2.length() * 0.5f;
+
+		}
+		
+		cout << "Volume: " << total_volume << endl;
+		cout << "Area:   " << total_area << endl;
+
+
+
 		get_vertices_and_normals_from_triangles(tris, face_normals, vertices, vertex_normals);
+	}
 
 	// Print box-counting dimension
 	// Make sure that step_size != 1.0f :)
-	cout << "Box counting dimension: " << logf(static_cast<float>(box_count)) / logf(1.0f / step_size) << endl;
+	//cout << "Box counting dimension: " << logf(static_cast<float>(box_count)) / logf(1.0f / step_size) << endl;
 }
 
 
@@ -263,7 +290,7 @@ void get_points(size_t res)
 	size_t x_res = res;
 	size_t y_res = res;
 	size_t z_res = res;
-	bool make_border = true;
+	bool make_border = false;
 
 	float z_w = 0;
 	quaternion C;
@@ -288,7 +315,7 @@ void get_points(size_t res)
 		return;
 	}
 	
-	get_isosurface(equation_string, x_grid_max, 50, z_w, C, max_iterations, threshold);
+	get_isosurface(equation_string, x_grid_max, 200, z_w, C, max_iterations, threshold);
 
 	const float x_step_size = (x_grid_max - x_grid_min) / (x_res - 1);
 	const float y_step_size = (y_grid_max - y_grid_min) / (y_res - 1);
@@ -1033,55 +1060,55 @@ void draw_objects(bool disable_colouring)
 
 
 
-	if (draw_curves)
-	{
-		if (false == disable_colouring)
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
+	//if (draw_curves)
+	//{
+	//	if (false == disable_colouring)
+	//		glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
 
-		for (size_t i = 0; i < pos.size(); i++)
-		{
-			for (size_t j = 0; j < pos[i].size() - 1; j++)
-			{
-				double t = j / static_cast<double>(pos[i].size() - 1);
+	//	for (size_t i = 0; i < pos.size(); i++)
+	//	{
+	//		for (size_t j = 0; j < pos[i].size() - 1; j++)
+	//		{
+	//			double t = j / static_cast<double>(pos[i].size() - 1);
 
-				RGB rgb = HSBtoRGB(static_cast<unsigned short>(300.f * t), 75, 100);
+	//			RGB rgb = HSBtoRGB(static_cast<unsigned short>(300.f * t), 75, 100);
 
-				float colour[] = { rgb.r / 255.0f, rgb.g / 255.0f, rgb.b / 255.0f, 1.0f };
+	//			float colour[] = { rgb.r / 255.0f, rgb.g / 255.0f, rgb.b / 255.0f, 1.0f };
 
-				glMaterialfv(GL_FRONT, GL_DIFFUSE, colour);
+	//			glMaterialfv(GL_FRONT, GL_DIFFUSE, colour);
 
-				vector_4 line = pos[i][j + 1] - pos[i][j];
+	//			vector_4 line = pos[i][j + 1] - pos[i][j];
 
-				glPushMatrix();
-				glTranslatef(static_cast<float>(pos[i][j].x), static_cast<float>(pos[i][j].y), static_cast<float>(pos[i][j].z));
+	//			glPushMatrix();
+	//			glTranslatef(static_cast<float>(pos[i][j].x), static_cast<float>(pos[i][j].y), static_cast<float>(pos[i][j].z));
 
-				float line_len = static_cast<float>(line.length());
-				line.normalize();
+	//			float line_len = static_cast<float>(line.length());
+	//			line.normalize();
 
-				float yaw = 0.0f;
+	//			float yaw = 0.0f;
 
-				if (fabsf(static_cast<float>(line.x)) < 0.00001f && fabsf(static_cast<float>(line.z)) < 0.00001f)
-					yaw = 0.0f;
-				else
-					yaw = atan2f(static_cast<float>(line.x), static_cast<float>(line.z));
+	//			if (fabsf(static_cast<float>(line.x)) < 0.00001f && fabsf(static_cast<float>(line.z)) < 0.00001f)
+	//				yaw = 0.0f;
+	//			else
+	//				yaw = atan2f(static_cast<float>(line.x), static_cast<float>(line.z));
 
-				float pitch = -atan2f(static_cast<float>(line.y), static_cast<float>(sqrt(line.x * line.x + line.z * line.z)));
+	//			float pitch = -atan2f(static_cast<float>(line.y), static_cast<float>(sqrt(line.x * line.x + line.z * line.z)));
 
-				glRotatef(yaw * rad_to_deg, 0.0f, 1.0f, 0.0f);
-				glRotatef(pitch * rad_to_deg, 1.0f, 0.0f, 0.0f);
+	//			glRotatef(yaw * rad_to_deg, 0.0f, 1.0f, 0.0f);
+	//			glRotatef(pitch * rad_to_deg, 1.0f, 0.0f, 0.0f);
 
-				if (j == 0)
-					glutSolidSphere(0.005 * 1.5, 16, 16);
+	//			if (j == 0)
+	//				glutSolidSphere(0.005 * 1.5, 16, 16);
 
-				if (j < pos[i].size() - 2)
-					gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
-				else
-					glutSolidCone(0.005 * 4, 0.005 * 8, 20, 20);
+	//			if (j < pos[i].size() - 2)
+	//				gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
+	//			else
+	//				glutSolidCone(0.005 * 4, 0.005 * 8, 20, 20);
 
-				glPopMatrix();
-			}
+	//			glPopMatrix();
+	//		}
 
-		}
+	//	}
 
 
 		//for (size_t i = 0; i < all_4d_points.size(); i++)
@@ -1129,7 +1156,7 @@ void draw_objects(bool disable_colouring)
 
 		//}
 
-	}
+	//}
 
 
 	if (draw_mesh)
