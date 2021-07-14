@@ -49,6 +49,39 @@ float quaternion_julia_set_equation_parser::iterate(vector<vector_4> &points, co
 }
 
 
+float quaternion_julia_set_equation_parser::iterate_mandelbrot(vector<vector_4>& points, const quaternion& src_Z, const short unsigned int& max_iterations, const float& threshold)
+{
+	C = src_Z;
+	Z = quaternion(0, 0, 0, 0);
+
+	vector_4 p;
+	p.x = Z.x;
+	p.y = Z.y;
+	p.z = Z.z;
+	p.w = Z.w;
+	points.push_back(p);
+
+	float len_sq = 0;
+	const float threshold_sq = threshold * threshold;
+
+	for (short unsigned int i = 0; i < max_iterations; i++)
+	{
+		for (size_t j = 0; j < execution_stack.size(); j++)
+			(q_math.*execution_stack[j].f)(execution_stack[j].a, execution_stack[j].b, execution_stack[j].out);
+
+		p.x = Z.x;
+		p.y = Z.y;
+		p.z = Z.z;
+		p.w = Z.w;
+		points.push_back(p);
+
+		if ((len_sq = Z.self_dot()) >= threshold_sq)
+			break;
+	}
+
+	return sqrt(len_sq);
+}
+
 string quaternion_julia_set_equation_parser::get_unique_formula_string(void)
 {
 	return unique_formula_string;

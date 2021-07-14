@@ -94,6 +94,7 @@ public:
 	~quaternion_julia_set_equation_parser() { cleanup(); }
 	bool setup(const string &src_formula, string &error_output, const quaternion &src_C);
 	float iterate(vector<vector_4> &points, const quaternion &src_Z, const short unsigned int &max_iterations, const float &threshold);
+	float iterate_mandelbrot(vector<vector_4>& points, const quaternion& src_Z, const short unsigned int& max_iterations, const float& threshold);
 	string get_unique_formula_string(void);
 
 protected:

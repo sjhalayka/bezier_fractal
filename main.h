@@ -171,7 +171,7 @@ void get_isosurface(const string equation,
 			if (true == make_border && (x == 0 || y == 0 || z == 0 || x == res - 1 || y == res - 1 || z == res - 1))
 				xyplane0[x * res + y] = border_value; // 0;
 			else
-				xyplane0[x * res + y] = eqparser.iterate(points, Z, max_iterations, threshold);
+				xyplane0[x * res + y] = eqparser.iterate_mandelbrot(points, Z, max_iterations, threshold);
 
 			//if (xyplane0[x * res + y] > threshold)
 			//	xyplane0[x * res + y] = 0;
@@ -205,7 +205,7 @@ void get_isosurface(const string equation,
 				if (true == make_border && (x == 0 || y == 0 || z == 0 || x == res - 1 || y == res - 1 || z == res - 1))
 					xyplane1[x * res + y] = border_value; // 0;
 				else
-					xyplane1[x * res + y] = eqparser.iterate(points, Z, max_iterations, threshold);
+					xyplane1[x * res + y] = eqparser.iterate_mandelbrot(points, Z, max_iterations, threshold);
 
 				//if (xyplane1[x * res + y] > threshold)
 				//	xyplane1[x * res + y] = 0;
@@ -315,7 +315,7 @@ void get_points(size_t res)
 		return;
 	}
 	
-	get_isosurface(equation_string, x_grid_max, 200, z_w, C, max_iterations, threshold);
+	get_isosurface(equation_string, x_grid_max, 50, z_w, C, max_iterations, threshold);
 
 	const float x_step_size = (x_grid_max - x_grid_min) / (x_res - 1);
 	const float y_step_size = (y_grid_max - y_grid_min) / (y_res - 1);
@@ -335,7 +335,7 @@ void get_points(size_t res)
 		{
 			vector<vector_4> points;
 
-			float length = eqparser.iterate(points, Z, max_iterations, threshold);
+			float length = eqparser.iterate_mandelbrot(points, Z, max_iterations, threshold);
 
 			if (length < threshold)
 			{
@@ -359,7 +359,7 @@ void get_points(size_t res)
 			{
 				vector<vector_4> points;
 
-				float length = eqparser.iterate(points, Z, max_iterations, threshold);
+				float length = eqparser.iterate_mandelbrot(points, Z, max_iterations, threshold);
 
 				if (length < threshold)
 				{
@@ -392,7 +392,7 @@ void get_points(size_t res)
 	{
 		vector<vector_4> p;
 
-		for (float t = 0; t <= 0.2f; t += 0.01f)
+		for (float t = 0; t <= 1.0f; t += 0.01f)
 		//for (float t = 0; t <= 0.85f; t += 0.01f)
 		{
 			vector_4 v = getBezierPoint(all_4d_points[i], t);
