@@ -4,6 +4,8 @@
 
 #include "eqparse.h"
 
+#include "quaternion_math.h"
+
 
 void quaternion_julia_set_equation_parser::cleanup(void)
 {
@@ -35,6 +37,8 @@ float quaternion_julia_set_equation_parser::iterate(vector<vector_4> &points, co
 		for(size_t j = 0; j < execution_stack.size(); j++)
 			(q_math.*execution_stack[j].f)(execution_stack[j].a, execution_stack[j].b, execution_stack[j].out);
 
+		//Z = mul(Z, Z) + C;
+
 		p.x = Z.x;
 		p.y = Z.y;
 		p.z = Z.z;
@@ -51,6 +55,8 @@ float quaternion_julia_set_equation_parser::iterate(vector<vector_4> &points, co
 
 float quaternion_julia_set_equation_parser::iterate_mandelbrot(vector<vector_4>& points, const quaternion& src_Z, const short unsigned int& max_iterations, const float& threshold)
 {
+	static quaternion_math qmath;
+
 	C = src_Z;
 	Z = quaternion(0, 0, 0, 0);
 
@@ -66,8 +72,14 @@ float quaternion_julia_set_equation_parser::iterate_mandelbrot(vector<vector_4>&
 
 	for (short unsigned int i = 0; i < max_iterations; i++)
 	{
-		for (size_t j = 0; j < execution_stack.size(); j++)
-			(q_math.*execution_stack[j].f)(execution_stack[j].a, execution_stack[j].b, execution_stack[j].out);
+		//for (size_t j = 0; j < execution_stack.size(); j++)
+		//	(q_math.*execution_stack[j].f)(execution_stack[j].a, execution_stack[j].b, execution_stack[j].out);
+
+		const quaternion P(2, 0, 0, 0);
+
+		qmath.pow(&Z, &P, &Z);
+		qmath.add(&Z, &C, &Z);
+
 
 		p.x = Z.x;
 		p.y = Z.y;

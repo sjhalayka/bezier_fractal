@@ -305,8 +305,10 @@ void get_points(size_t res)
 	//string equation_string = "Z = exp(Z^2) + C";
 	//string equation_string = "Z = C * (inverse(sinh(Z)) * cosh(Z))";
 	
-	string equation_string = "Z = Z*Z + C";
-	
+	string equation_string = "Z = sin(Z) + C";
+
+	//string equation_string = "Z = sin(C) + Z*sin(C)";
+
 	string error_string;
 	quaternion_julia_set_equation_parser eqparser;
 	if (false == eqparser.setup(equation_string, error_string, C))

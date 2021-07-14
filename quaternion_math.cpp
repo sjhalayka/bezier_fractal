@@ -466,35 +466,68 @@ void quaternion_math::mul(const quaternion *const qA, const quaternion *const qB
 	qOut->w = temp_a_x*temp_b_w + temp_a_y*temp_b_z - temp_a_z*temp_b_y + temp_a_w*temp_b_x;
 }
 
-void quaternion_math::pow(const quaternion *const qA, const quaternion *const qB, quaternion *const qOut)
-{
-	long unsigned int exp = static_cast<long unsigned int>(fabs(qB->x));
+//void quaternion_math::pow(const quaternion *const qA, const quaternion *const qB, quaternion *const qOut)
+//{
+//	long unsigned int exp = static_cast<long unsigned int>(fabs(qB->x));
+//
+//	if(0 == exp)
+//	{
+//		qOut->x = 1;
+//		qOut->y = 0;
+//		qOut->z = 0;
+//		qOut->w = 0;
+//	}
+//	else if(1 == exp)
+//	{
+//		qOut->x = qA->x;
+//		qOut->y = qA->y;
+//		qOut->z = qA->z;
+//		qOut->w = qA->w;
+//	}
+//	else
+//	{
+//		static quaternion temp_quat;
+//		temp_quat = *qOut = *qA;
+//
+//		for(long unsigned int i = 1; i < exp; i++)
+//		{
+//			mul(qOut, &temp_quat, qOut);
+//		}
+//	}
+//}
 
-	if(0 == exp)
-	{
-		qOut->x = 1;
-		qOut->y = 0;
-		qOut->z = 0;
-		qOut->w = 0;
-	}
-	else if(1 == exp)
+#include <iostream>
+using namespace std;
+
+void quaternion_math::pow(const quaternion* const qA, const quaternion* const qB, quaternion* const qOut)
+{
+	float beta = qB->x;
+
+	float self_dot = qA->x * qA->x + qA->y * qA->y + qA->z * qA->z + qA->w * qA->w;
+
+	if (self_dot == 0)
 	{
 		qOut->x = qA->x;
 		qOut->y = qA->y;
 		qOut->z = qA->z;
 		qOut->w = qA->w;
-	}
-	else
-	{
-		static quaternion temp_quat;
-		temp_quat = *qOut = *qA;
 
-		for(long unsigned int i = 1; i < exp; i++)
-		{
-			mul(qOut, &temp_quat, qOut);
-		}
+		return;
 	}
+
+	float len = std::sqrtf(self_dot);
+	float self_dot_beta = std::powf(self_dot, beta / 2.0f);
+
+	quaternion out;
+
+	out.x = self_dot_beta * std::cos(beta* std::acos(qA->x / len));
+	out.y = qA->y * self_dot_beta * std::sin(beta * std::acos(qA->x / len)) / sqrtf(qA->y * qA->y + qA->z * qA->z + qA->w * qA->w);;
+	out.z = qA->z * self_dot_beta * std::sin(beta * std::acos(qA->x / len)) / sqrtf(qA->y * qA->y + qA->z * qA->z + qA->w * qA->w);;
+	out.w = qA->w * self_dot_beta * std::sin(beta * std::acos(qA->x / len)) / sqrtf(qA->y * qA->y + qA->z * qA->z + qA->w * qA->w);;
+
+	*qOut = out;
 }
+
 
 void quaternion_math::div(const quaternion *const qA, const quaternion *const qB, quaternion *const qOut)
 {
