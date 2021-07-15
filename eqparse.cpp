@@ -75,7 +75,7 @@ float quaternion_julia_set_equation_parser::iterate_mandelbrot(vector<vector_4>&
 		//for (size_t j = 0; j < execution_stack.size(); j++)
 		//	(q_math.*execution_stack[j].f)(execution_stack[j].a, execution_stack[j].b, execution_stack[j].out);
 
-		const quaternion P(2, 0, 0, 0);
+		const quaternion P(5, 0, 0, 0);
 
 		qmath.pow(&Z, &P, &Z);
 		qmath.add(&Z, &C, &Z);

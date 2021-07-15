@@ -305,7 +305,7 @@ void get_points(size_t res)
 	//string equation_string = "Z = exp(Z^2) + C";
 	//string equation_string = "Z = C * (inverse(sinh(Z)) * cosh(Z))";
 	
-	string equation_string = "Z = sin(Z) + C";
+	string equation_string = "Z = Z"; // this doesn't matter when using Mandelbrot
 
 	//string equation_string = "Z = sin(C) + Z*sin(C)";
 
