@@ -298,7 +298,7 @@ void get_points(size_t res)
 	C.y = 0.5;
 	C.z = 0.4;
 	C.w = 0.2;
-	unsigned short int max_iterations = 8;
+	unsigned short int max_iterations = 128;
 	float threshold = 4;
 
 	//string equation_string = "Z = inverse(sinh(Z)) + C * inverse(sinh(Z))";
@@ -385,13 +385,23 @@ void get_points(size_t res)
 		}
 
 		if (point_set.size() != all_4d_points[i].size())
+		{
+			cout << point_set.size() << endl;
 			orbit_count++;
+		}
 	}
 
 	cout << "orbit count " << orbit_count << endl;
 
+
+
+
+
 	for (size_t i = 0; i < all_4d_points.size(); i++)
 	{
+		//if (all_4d_points[i].size() == 0)
+		//	continue;
+
 		vector<vector_4> p;
 
 		for (float t = 0; t <= 1.0f; t += 0.01f)
@@ -819,7 +829,7 @@ void keyboard_func(unsigned char key, int x, int y)
 	}
 	case 'm':
 		{
-			take_screenshot(8, 50, "screenshot.tga");
+			take_screenshot(8, 20, "screenshot.tga");
 			break;
 		}
 
@@ -1071,7 +1081,19 @@ void draw_objects(bool disable_colouring)
 		{
 			for (size_t j = 0; j < pos[i].size() - 1; j++)
 			{
-				double t = j / static_cast<double>(pos[i].size() - 1);
+				// double t = j / static_cast<double>(pos[i].size() - 1);
+
+				set<vector_4> point_set;
+
+				for (size_t j = 0; j < all_4d_points[i].size(); j++)
+				{
+					point_set.insert(all_4d_points[i][j]);
+				}
+
+				if (point_set.size() == all_4d_points[i].size())
+					continue;
+
+				double t = static_cast<float>(point_set.size()) / static_cast<float>(all_4d_points[i].size());
 
 				RGB rgb = HSBtoRGB(static_cast<unsigned short>(300.f * t), 75, 100);
 
