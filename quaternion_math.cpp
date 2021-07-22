@@ -507,10 +507,10 @@ void quaternion_math::pow(const quaternion* const qA, const quaternion* const qB
 
 	if (self_dot == 0)
 	{
-		qOut->x = qA->x;
-		qOut->y = qA->y;
-		qOut->z = qA->z;
-		qOut->w = qA->w;
+		//qOut->x = 0;
+//		qOut->y = 0;
+	//	qOut->z = 0;
+		//qOut->w = 0;
 
 		return;
 	}

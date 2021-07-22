@@ -32,14 +32,20 @@ using std::mt19937;
 
 size_t point_res = 10;
 
+float grid_max = 1.5;
+
+quaternion C(0.2, 0.5, 0.0, 0.0);
+unsigned short int max_iterations = 8;
+float threshold = 4.0;
+float beta = 2.0f;
+bool mandelbrot_mode = false;
+
 
 
 vector_3 background_colour(1.0, 1.0, 1.0);
 float orange[] = { 1.0f, 0.5f, 0.0f, 1.0f };
 float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.1f };
 float mesh_solid[] = { 0.0f, 0.5f, 1.0f, 1.0f };
-
-float sphere_transparent[] = { 0.0f, 0.5f, 1.0f, 0.2f };
 
 float outline_width = 3.0;
 static const float outline_colour[] = {0.0, 0.0, 0.0};
@@ -89,17 +95,125 @@ vector<vertex_3> face_normals;
 vector<vertex_3> vertices;
 vector<vertex_3> vertex_normals;
 
-vector<triangle> sphere_tris;
-vector<vertex_3> sphere_face_normals;
-vector<vertex_3> sphere_vertices;
-vector<vertex_3> sphere_vertex_normals;
-
-
-
-//vector<vertex_3> grid_vertices;
-
 vector<vector<vector_4> > all_4d_points;
 vector<vector<vector_4> > pos;
+
+
+
+
+
+
+
+float iterate_julia(vector<vector_4>& points, const quaternion& src_Z, const quaternion& src_C, const short unsigned int& max_iterations, const float& threshold, const float exponent)
+{
+	static quaternion_math qmath;
+
+	quaternion C = src_C;
+	quaternion Z = src_Z;
+
+	vector_4 p;
+	p.x = Z.x;
+	p.y = Z.y;
+	p.z = Z.z;
+	p.w = Z.w;
+	points.push_back(p);
+
+	float len_sq = 0;
+	const float threshold_sq = threshold * threshold;
+
+	for (short unsigned int i = 0; i < max_iterations; i++)
+	{
+		const quaternion P(exponent, 0, 0, 0);
+
+		qmath.pow(&Z, &P, &Z);
+		qmath.add(&Z, &C, &Z);
+
+		p.x = Z.x;
+		p.y = Z.y;
+		p.z = Z.z;
+		p.w = Z.w;
+		points.push_back(p);
+
+		if ((len_sq = Z.self_dot()) >= threshold_sq)
+			break;
+	}
+
+	return sqrt(len_sq);
+}
+
+
+float iterate_mandelbrot(vector<vector_4>& points, const quaternion& src_Z, const quaternion &src_C, const short unsigned int& max_iterations, const float& threshold, const float exponent)
+{
+	static quaternion_math qmath;
+
+	quaternion C = src_Z;
+	quaternion Z = quaternion(0, 0, 0, 0);
+
+
+
+	vector_4 p;
+	p.x = Z.x;
+	p.y = Z.y;
+	p.z = Z.z;
+	p.w = Z.w;
+	points.push_back(p);
+
+	float len_sq = 0;
+	const float threshold_sq = threshold * threshold;
+
+	for (short unsigned int i = 0; i < max_iterations; i++)
+	{
+		const quaternion P(exponent, 0, 0, 0);
+
+		qmath.pow(&Z, &P, &Z);
+		qmath.add(&Z, &C, &Z);
+
+		p.x = Z.x;
+		p.y = Z.y;
+		p.z = Z.z;
+		p.w = Z.w;
+		points.push_back(p);
+
+		if ((len_sq = Z.self_dot()) >= threshold_sq)
+			break;
+	}
+
+	return sqrt(len_sq);
+}
+
+float iterate(bool mandelbrot,
+	vector< vector_4 >& trajectory_points,
+	quaternion src_Z,
+	quaternion src_C,
+	const short unsigned int max_iterations,
+	const float threshold,
+	const float exponent)
+{
+	trajectory_points.clear();
+
+	if (mandelbrot)
+	{
+		return iterate_mandelbrot(
+			trajectory_points,
+			src_Z,
+			src_C,
+			max_iterations,
+			threshold,
+			exponent);
+	}
+	else
+	{
+		return iterate_julia(
+			trajectory_points,
+			src_Z,
+			src_C,
+			max_iterations,
+			threshold,
+			exponent);
+	}
+}
+
+
 
 
 // https://stackoverflow.com/questions/785097/how-do-i-implement-a-bézier-curve-in-c
@@ -125,26 +239,20 @@ vector_4 getBezierPoint(vector<vector_4> points, float t)
 
 
 
-void get_isosurface(const string equation, 
+void get_isosurface(
+	const bool mandelbrot,
 	const float grid_max, 
 	const size_t res, 
 	const float z_w, 
 	const quaternion C, 
 	const unsigned short int max_iterations,
-	const float threshold)
+	const float threshold,
+const float exponent)
 {
 
 	const float grid_min = -grid_max;
 
 	const bool make_border = true;
-
-	string error_string;
-	quaternion_julia_set_equation_parser eqparser;
-	if (false == eqparser.setup(equation, error_string, C))
-	{
-		cout << "Equation error: " << error_string << endl;
-		return;
-	}
 
 	// When adding a border, use a value that is greater than the threshold.
 	const float border_value = 1.0f + threshold;
@@ -171,7 +279,7 @@ void get_isosurface(const string equation,
 			if (true == make_border && (x == 0 || y == 0 || z == 0 || x == res - 1 || y == res - 1 || z == res - 1))
 				xyplane0[x * res + y] = border_value; // 0;
 			else
-				xyplane0[x * res + y] = eqparser.iterate_mandelbrot(points, Z, max_iterations, threshold);
+				xyplane0[x * res + y] = iterate(mandelbrot, points, Z, C, max_iterations, threshold, exponent);
 
 			//if (xyplane0[x * res + y] > threshold)
 			//	xyplane0[x * res + y] = 0;
@@ -205,7 +313,7 @@ void get_isosurface(const string equation,
 				if (true == make_border && (x == 0 || y == 0 || z == 0 || x == res - 1 || y == res - 1 || z == res - 1))
 					xyplane1[x * res + y] = border_value; // 0;
 				else
-					xyplane1[x * res + y] = eqparser.iterate_mandelbrot(points, Z, max_iterations, threshold);
+					xyplane1[x * res + y] = iterate(mandelbrot, points, Z, C, max_iterations, threshold, exponent);
 
 				//if (xyplane1[x * res + y] > threshold)
 				//	xyplane1[x * res + y] = 0;
@@ -274,16 +382,21 @@ void get_isosurface(const string equation,
 
 
 
-void get_points(size_t res)
+void get_points(
+	const bool mandelbrot,
+	const float grid_max,
+	const size_t res,
+	const quaternion src_C,
+	const unsigned short int max_iterations,
+	const float threshold,
+	const float exponent)
 {
-	mt19937 mt_rand(1234567);
-
 	all_4d_points.clear();
 	pos.clear();
 
-	float x_grid_max = 1.5;
-	float y_grid_max = 1.5;
-	float z_grid_max = 1.5;
+	float x_grid_max = grid_max;
+	float y_grid_max = grid_max;
+	float z_grid_max = grid_max;
 	float x_grid_min = -x_grid_max;
 	float y_grid_min = -y_grid_max;
 	float z_grid_min = -z_grid_max;
@@ -293,39 +406,14 @@ void get_points(size_t res)
 	bool make_border = false;
 
 	float z_w = 0;
-	quaternion C;
-	C.x = 0.3;
-	C.y = 0.5;
-	C.z = 0.4;
-	C.w = 0.2;
-	unsigned short int max_iterations = 128;
-	float threshold = 4;
 
-	//string equation_string = "Z = inverse(sinh(Z)) + C * inverse(sinh(Z))";
-	//string equation_string = "Z = exp(Z^2) + C";
-	//string equation_string = "Z = C * (inverse(sinh(Z)) * cosh(Z))";
-	
-	string equation_string = "Z = Z"; // this doesn't matter when using Mandelbrot
-
-	//string equation_string = "Z = sin(C) + Z*sin(C)";
-
-	string error_string;
-	quaternion_julia_set_equation_parser eqparser;
-	if (false == eqparser.setup(equation_string, error_string, C))
-	{
-		cout << "Equation error: " << error_string << endl;
-		return;
-	}
-	
-	get_isosurface(equation_string, x_grid_max, 50, z_w, C, max_iterations, threshold);
+	get_isosurface(mandelbrot, grid_max, 50, z_w, src_C, max_iterations, threshold, exponent);
 
 	const float x_step_size = (x_grid_max - x_grid_min) / (x_res - 1);
 	const float y_step_size = (y_grid_max - y_grid_min) / (y_res - 1);
 	const float z_step_size = (z_grid_max - z_grid_min) / (z_res - 1);
 
 	size_t z = 0;
-
-//	grid_vertices.clear();
 
 	quaternion Z(x_grid_min, y_grid_min, z_grid_min, z_w);
 
@@ -337,7 +425,7 @@ void get_points(size_t res)
 		{
 			vector<vector_4> points;
 
-			float length = eqparser.iterate_mandelbrot(points, Z, max_iterations, threshold);
+			float length = iterate(mandelbrot, points, Z, C, max_iterations, threshold, exponent);
 
 			if (length < threshold)
 			{
@@ -361,7 +449,7 @@ void get_points(size_t res)
 			{
 				vector<vector_4> points;
 
-				float length = eqparser.iterate_mandelbrot(points, Z, max_iterations, threshold);
+				float length = iterate(mandelbrot, points, Z, C, max_iterations, threshold, exponent);
 
 				if (length < threshold)
 				{
@@ -399,12 +487,9 @@ void get_points(size_t res)
 
 	for (size_t i = 0; i < all_4d_points.size(); i++)
 	{
-		//if (all_4d_points[i].size() == 0)
-		//	continue;
-
 		vector<vector_4> p;
 
-		for (float t = 0; t <= 1.0f; t += 0.01f)
+		for (float t = 0; t <= 0.2f; t += 0.01f)
 		//for (float t = 0; t <= 0.85f; t += 0.01f)
 		{
 			vector_4 v = getBezierPoint(all_4d_points[i], t);
@@ -418,11 +503,11 @@ void get_points(size_t res)
 
 
 // TODO: fix camera bug where portrait mode crashes.
-void take_screenshot(size_t num_cams_wide, size_t res, const char *filename, const bool reverse_rows = false)
+void take_screenshot(size_t num_cams_wide, const char *filename, const bool reverse_rows = false)
 {
 	screenshot_mode = true;
 
-	get_points(res);
+	
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -528,7 +613,7 @@ void take_screenshot(size_t num_cams_wide, size_t res, const char *filename, con
 
 	out.write(reinterpret_cast<char *>(&pixel_data[0]), num_bytes);
 
-	get_points(point_res);
+
 }
 
 void idle_func(void)
@@ -596,8 +681,7 @@ void init_opengl(const int &width, const int &height)
 
 	main_camera.Set(0, 0, camera_w, camera_fov, win_x, win_y, camera_near, camera_far);
 
-	get_points(point_res);
-
+	get_points(mandelbrot_mode, grid_max, point_res, C, max_iterations, threshold, beta);
 }
 
 void reshape_func(int width, int height)
@@ -633,9 +717,6 @@ void render_string(int x, const int y, void *font, const string &text)
 void display_func(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-
-
 
 
 	if(true == draw_outline)
@@ -761,29 +842,6 @@ void display_func(void)
 
 
 
-	//glMaterialfv(GL_FRONT, GL_DIFFUSE, sphere_transparent);
-
-	//glBegin(GL_TRIANGLES);
-
-	//for (size_t i = 0; i < sphere_tris.size(); i++)
-	//{
-	//	size_t v_index0 = sphere_tris[i].vertex[0].index;
-	//	size_t v_index1 = sphere_tris[i].vertex[1].index;
-	//	size_t v_index2 = sphere_tris[i].vertex[2].index;
-
-	//	glNormal3f(sphere_vertex_normals[v_index0].x, sphere_vertex_normals[v_index0].y, sphere_vertex_normals[v_index0].z);
-	//	glVertex3f(sphere_vertices[v_index0].x, sphere_vertices[v_index0].y, sphere_vertices[v_index0].z);
-	//	glNormal3f(sphere_vertex_normals[v_index1].x, sphere_vertex_normals[v_index1].y, sphere_vertex_normals[v_index1].z);
-	//	glVertex3f(sphere_vertices[v_index1].x, sphere_vertices[v_index1].y, sphere_vertices[v_index1].z);
-	//	glNormal3f(sphere_vertex_normals[v_index2].x, sphere_vertex_normals[v_index2].y, sphere_vertex_normals[v_index2].z);
-	//	glVertex3f(sphere_vertices[v_index2].x, sphere_vertices[v_index2].y, sphere_vertices[v_index2].z);
-	//}
-
-	//glEnd();
-
-
-	//glDisable(GL_BLEND);
-	//glDisable(GL_ALPHA);
 
 
 	if (false == screenshot_mode)
@@ -824,15 +882,50 @@ void keyboard_func(unsigned char key, int x, int y)
 		}
 	case 'n':
 	{
-		take_screenshot(8, point_res, "screenshot.tga");
+		get_points(mandelbrot_mode, grid_max, point_res, C, max_iterations, threshold, beta);
+		take_screenshot(8, "screenshot.tga");
+		get_points(mandelbrot_mode, grid_max, point_res, C, max_iterations, threshold, beta);
 		break;
 	}
 	case 'm':
 		{
-			take_screenshot(8, 20, "screenshot.tga");
+			get_points(mandelbrot_mode, grid_max, 20, C, max_iterations, threshold, beta);
+			take_screenshot(8, "screenshot.tga");
+			get_points(mandelbrot_mode, grid_max, point_res, C, max_iterations, threshold, beta);
 			break;
 		}
+	case 'b':
+	{
+		vector<float> betas = { -8, -7, -6, -5, -4, -3, 2, 3, 4, 5, 6, 7, 8 };
 
+		for (size_t i = 0; i < betas.size(); i++)
+		{
+			ostringstream oss;
+			oss << betas[i];
+
+			string filename = "julia3d_" + oss.str() + ".tga";
+
+			cout << filename << endl;
+
+			get_points(false, grid_max, 20, C, max_iterations, threshold, betas[i]);
+			take_screenshot(2, filename.c_str());
+		}
+
+		for (size_t i = 0; i < betas.size(); i++)
+		{
+			ostringstream oss;
+			oss << betas[i];
+
+			string filename = "mandelbrot3d_" + oss.str() + ".tga";
+
+			cout << filename << endl;
+
+			get_points(true, grid_max, 20, C, max_iterations, threshold, betas[i]);
+			take_screenshot(2, filename.c_str());
+		}
+
+		break;
+	}
 	default:
 		break;
 	}
@@ -1081,19 +1174,19 @@ void draw_objects(bool disable_colouring)
 		{
 			for (size_t j = 0; j < pos[i].size() - 1; j++)
 			{
-				// double t = j / static_cast<double>(pos[i].size() - 1);
+				double t = j / static_cast<double>(pos[i].size() - 1);
 
-				set<vector_4> point_set;
+				//set<vector_4> point_set;
 
-				for (size_t j = 0; j < all_4d_points[i].size(); j++)
-				{
-					point_set.insert(all_4d_points[i][j]);
-				}
+				//for (size_t j = 0; j < all_4d_points[i].size(); j++)
+				//{
+				//	point_set.insert(all_4d_points[i][j]);
+				//}
 
-				if (point_set.size() == all_4d_points[i].size())
-					continue;
+				//if (point_set.size() == all_4d_points[i].size())
+				//	continue;
 
-				double t = static_cast<float>(point_set.size()) / static_cast<float>(all_4d_points[i].size());
+				// double t = static_cast<float>(point_set.size()) / static_cast<float>(all_4d_points[i].size());
 
 				RGB rgb = HSBtoRGB(static_cast<unsigned short>(300.f * t), 75, 100);
 
