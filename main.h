@@ -149,8 +149,6 @@ float iterate_mandelbrot(vector<vector_4>& points, const quaternion& src_Z, cons
 	quaternion C = src_Z;
 	quaternion Z = quaternion(0, 0, 0, 0);
 
-
-
 	vector_4 p;
 	p.x = Z.x;
 	p.y = Z.y;

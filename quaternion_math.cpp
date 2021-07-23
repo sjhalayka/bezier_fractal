@@ -503,27 +503,32 @@ void quaternion_math::pow(const quaternion* const qA, const quaternion* const qB
 {
 	float beta = qB->x;
 
+	float fabs_beta = fabsf(beta);
+
 	float self_dot = qA->x * qA->x + qA->y * qA->y + qA->z * qA->z + qA->w * qA->w;
 
 	if (self_dot == 0)
 	{
-		//qOut->x = 0;
-//		qOut->y = 0;
-	//	qOut->z = 0;
-		//qOut->w = 0;
+		qOut->x = 0;
+		qOut->y = 0;
+		qOut->z = 0;
+		qOut->w = 0;
 
 		return;
 	}
 
 	float len = std::sqrtf(self_dot);
-	float self_dot_beta = std::powf(self_dot, beta / 2.0f);
+	float self_dot_beta = std::powf(self_dot, fabs_beta / 2.0f);
 
 	quaternion out;
 
-	out.x = self_dot_beta * std::cos(beta* std::acos(qA->x / len));
-	out.y = qA->y * self_dot_beta * std::sin(beta * std::acos(qA->x / len)) / sqrtf(qA->y * qA->y + qA->z * qA->z + qA->w * qA->w);;
-	out.z = qA->z * self_dot_beta * std::sin(beta * std::acos(qA->x / len)) / sqrtf(qA->y * qA->y + qA->z * qA->z + qA->w * qA->w);;
-	out.w = qA->w * self_dot_beta * std::sin(beta * std::acos(qA->x / len)) / sqrtf(qA->y * qA->y + qA->z * qA->z + qA->w * qA->w);;
+	out.x = self_dot_beta * std::cos(fabs_beta * std::acos(qA->x / len));
+	out.y = qA->y * self_dot_beta * std::sin(fabs_beta * std::acos(qA->x / len)) / sqrtf(qA->y * qA->y + qA->z * qA->z + qA->w * qA->w);;
+	out.z = qA->z * self_dot_beta * std::sin(fabs_beta * std::acos(qA->x / len)) / sqrtf(qA->y * qA->y + qA->z * qA->z + qA->w * qA->w);;
+	out.w = qA->w * self_dot_beta * std::sin(fabs_beta * std::acos(qA->x / len)) / sqrtf(qA->y * qA->y + qA->z * qA->z + qA->w * qA->w);;
+
+	if (beta < 0)
+		inverse(&out, 0, &out);
 
 	*qOut = out;
 }
