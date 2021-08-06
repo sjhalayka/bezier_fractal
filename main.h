@@ -8,6 +8,13 @@
 #define main_H
 
 
+
+
+#include "bspline_library/Bezier.h"
+#include "bspline_library/BSpline.h"
+#include "bspline_library/CatmullRom.h"
+
+
 #include "uv_camera.h"
 
 #include "marching_cubes.h"
@@ -34,7 +41,7 @@ size_t point_res = 10;
 
 float grid_max = 1.5;
 
-quaternion C(0.2, 0.5, 0.0, 0.0);
+quaternion C(0.2, 0.5, 0.3, 0.4);
 unsigned short int max_iterations = 8;
 float threshold = 4.0;
 float beta = 2.0f;
@@ -479,7 +486,9 @@ void get_points(
 
 	cout << "orbit count " << orbit_count << endl;
 
+#define OLD_BEZIER
 
+#ifdef OLD_BEZIER
 
 
 
@@ -487,7 +496,7 @@ void get_points(
 	{
 		vector<vector_4> p;
 
-		for (float t = 0; t <= 0.2f; t += 0.01f)
+		for (float t = 0; t <= 1.0f; t += 0.01f)
 		//for (float t = 0; t <= 0.85f; t += 0.01f)
 		{
 			vector_4 v = getBezierPoint(all_4d_points[i], t);
@@ -497,6 +506,38 @@ void get_points(
 		pos.push_back(p);
 	}
 
+
+#else
+
+
+	for (size_t i = 0; i < all_4d_points.size(); i++)
+	{
+		Curve* curve = new CatmullRom();
+		curve->set_steps(10);
+
+		for (size_t j = 0; j < all_4d_points[i].size(); j++)
+			curve->add_way_point(Vector(all_4d_points[i][j].x, all_4d_points[i][j].y, all_4d_points[i][j].z));
+
+//		if (is_cycle[i])
+///		{
+//			for (size_t j = 0; j < all_4d_points[i].size(); j++)
+//				curve->add_way_point(Vector(all_4d_points[i][j].x, all_4d_points[i][j].y, all_4d_points[i][j].z));
+//		}
+
+		vector<vector_4> p;
+
+		for (int i = 0; i < curve->node_count(); i++)
+			p.push_back(vector_4(curve->node(i).x, curve->node(i).y, curve->node(i).z, 0));
+
+		if (p.size() == 0)
+			p.push_back(all_4d_points[i][0]);
+
+		pos.push_back(p);
+
+		delete curve;
+	}
+
+#endif
 }
 
 
