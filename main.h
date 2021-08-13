@@ -37,15 +37,15 @@ using namespace std;
 #include <random>
 using std::mt19937;
 
-size_t point_res = 10;
+size_t point_res = 1;
 
 float grid_max = 1.5;
 
-quaternion C(0.2, 0.5, 0.3, 0.4);
-unsigned short int max_iterations = 8;
+quaternion C(0.2, 0.5, 0.3, 0.4); // For Julia set only
+unsigned short int max_iterations = 500;
 float threshold = 4.0;
 float beta = 2.0f;
-bool mandelbrot_mode = false;
+bool mandelbrot_mode = true;
 
 
 
@@ -412,7 +412,7 @@ void get_points(
 
 	float z_w = 0;
 
-	get_isosurface(mandelbrot, grid_max, 50, z_w, src_C, max_iterations, threshold, exponent);
+	get_isosurface(mandelbrot, grid_max, 300, z_w, src_C, max_iterations, threshold, exponent);
 
 	const float x_step_size = (x_grid_max - x_grid_min) / (x_res - 1);
 	const float y_step_size = (y_grid_max - y_grid_min) / (y_res - 1);
@@ -486,7 +486,7 @@ void get_points(
 
 	cout << "orbit count " << orbit_count << endl;
 
-#define OLD_BEZIER
+//#define OLD_BEZIER
 
 #ifdef OLD_BEZIER
 
@@ -513,7 +513,7 @@ void get_points(
 	for (size_t i = 0; i < all_4d_points.size(); i++)
 	{
 		Curve* curve = new CatmullRom();
-		curve->set_steps(10);
+		curve->set_steps(100);
 
 		for (size_t j = 0; j < all_4d_points[i].size(); j++)
 			curve->add_way_point(Vector(all_4d_points[i][j].x, all_4d_points[i][j].y, all_4d_points[i][j].z));
@@ -921,7 +921,7 @@ void keyboard_func(unsigned char key, int x, int y)
 		}
 	case 'n':
 	{
-		get_points(mandelbrot_mode, grid_max, point_res, C, max_iterations, threshold, beta);
+		get_points(mandelbrot_mode, grid_max, 10, C, max_iterations, threshold, beta);
 		take_screenshot(8, "screenshot.tga");
 		get_points(mandelbrot_mode, grid_max, point_res, C, max_iterations, threshold, beta);
 		break;
@@ -1253,13 +1253,13 @@ void draw_objects(bool disable_colouring)
 				glRotatef(yaw * rad_to_deg, 0.0f, 1.0f, 0.0f);
 				glRotatef(pitch * rad_to_deg, 1.0f, 0.0f, 0.0f);
 
-				if (j == 0)
-					glutSolidSphere(0.005 * 1.5, 16, 16);
+				//if (j == 0)
+				//	glutSolidSphere(0.005 * 1.5, 16, 16);
 
-				if (j < pos[i].size() - 2)
+				//if (j < pos[i].size() - 2)
 					gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
-				else
-					glutSolidCone(0.005 * 4, 0.005 * 8, 20, 20);
+				//else
+				//	glutSolidCone(0.005 * 4, 0.005 * 8, 20, 20);
 
 				glPopMatrix();
 			}
