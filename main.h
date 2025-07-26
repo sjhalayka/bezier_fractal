@@ -1,4 +1,4 @@
-﻿// Shawn Halayka -- shalayka@gmail.com
+// Shawn Halayka -- shalayka@gmail.com
 // June 26, 2010
 //
 // This code and data is in the public domain.
@@ -15,8 +15,6 @@ using namespace marching_cubes;
 
 #include "eqparse.h"
 
-#include "mesh.h"
-
 #include <fstream>
 using std::ofstream;
 
@@ -27,27 +25,20 @@ using std::ios;
 #include <sstream>
 using namespace std;
 
-#include <random>
-using std::mt19937;
 
-size_t point_res = 2;
 
 
 
 vector_3 background_colour(1.0, 1.0, 1.0);
 float orange[] = { 1.0f, 0.5f, 0.0f, 1.0f };
-float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.5f };
-float mesh_solid[] = { 0.0f, 0.5f, 1.0f, 1.0f };
-
-float sphere_transparent[] = { 0.0f, 0.5f, 1.0f, 0.2f };
+float mesh_transparent[] = { 0.0f, 0.5f, 1.0f, 0.1f };
 
 float outline_width = 3.0;
 static const float outline_colour[] = {0.0, 0.0, 0.0};
 
-bool draw_curves = true;
 bool draw_mesh = true;
 bool draw_outline = true;
-bool draw_axis = false;
+bool draw_axis = true;
 bool draw_control_list = true;
 bool screenshot_mode = false;
 
@@ -55,7 +46,7 @@ uv_camera main_camera;
 
 GLint win_id = 0;
 GLint win_x = 800, win_y = 600;
-float camera_w = 12;
+float camera_w = 3;
 float camera_fov = 45;
 float camera_x_transform = 0;
 float camera_y_transform = 0;
@@ -63,7 +54,7 @@ double u_spacer = 0.01;
 double v_spacer = 0.5*u_spacer;
 double w_spacer = 0.1;
 double camera_near = 0.1;
-double camera_far = 1000.0;
+double camera_far = 10.0;
 
 GLUquadricObj* glu_obj = gluNewQuadric(); // Probably should delete this before app exit... :)
 
@@ -89,20 +80,12 @@ vector<vertex_3> face_normals;
 vector<vertex_3> vertices;
 vector<vertex_3> vertex_normals;
 
-vector<triangle> sphere_tris;
-vector<vertex_3> sphere_face_normals;
-vector<vertex_3> sphere_vertices;
-vector<vertex_3> sphere_vertex_normals;
-
-
-
-//vector<vertex_3> grid_vertices;
 
 vector<vector<vector_4> > all_4d_points;
 vector<vector<vector_4> > pos;
 
 
-// https://stackoverflow.com/questions/785097/how-do-i-implement-a-bézier-curve-in-c
+// https://stackoverflow.com/questions/785097/how-do-i-implement-a-b�zier-curve-in-c
 vector_4 getBezierPoint(vector<vector_4> points, float t)
 {
 	int i = points.size() - 1;
@@ -124,6 +107,86 @@ vector_4 getBezierPoint(vector<vector_4> points, float t)
 }
 
 
+void get_vertices_and_normals_from_triangles(vector<triangle>& t, vector<vertex_3>& fn, vector<vertex_3>& v, vector<vertex_3>& vn)
+{
+	fn.clear();
+	v.clear();
+	vn.clear();
+
+	if (0 == t.size())
+		return;
+
+	cout << "Triangles: " << t.size() << endl;
+
+	cout << "Welding vertices" << endl;
+
+	// Insert unique vertices into set.
+	set<vertex_3> vertex_set;
+
+	for (vector<triangle>::const_iterator i = t.begin(); i != t.end(); i++)
+	{
+		vertex_set.insert(i->vertex[0]);
+		vertex_set.insert(i->vertex[1]);
+		vertex_set.insert(i->vertex[2]);
+	}
+
+	cout << "Vertices: " << vertex_set.size() << endl;
+
+	cout << "Generating vertex indices" << endl;
+
+	// Add indices to the vertices.
+	for (set<vertex_3>::const_iterator i = vertex_set.begin(); i != vertex_set.end(); i++)
+	{
+		size_t index = v.size();
+		v.push_back(*i);
+		v[index].index = index;
+	}
+
+	vertex_set.clear();
+
+	// Re-insert modifies vertices into set.
+	for (vector<vertex_3>::const_iterator i = v.begin(); i != v.end(); i++)
+		vertex_set.insert(*i);
+
+	cout << "Assigning vertex indices to triangles" << endl;
+
+	// Find the three vertices for each triangle, by index.
+	set<vertex_3>::iterator find_iter;
+
+	for (vector<triangle>::iterator i = t.begin(); i != t.end(); i++)
+	{
+		find_iter = vertex_set.find(i->vertex[0]);
+		i->vertex[0].index = find_iter->index;
+
+		find_iter = vertex_set.find(i->vertex[1]);
+		i->vertex[1].index = find_iter->index;
+
+		find_iter = vertex_set.find(i->vertex[2]);
+		i->vertex[2].index = find_iter->index;
+	}
+
+	vertex_set.clear();
+
+	cout << "Calculating normals" << endl;
+	fn.resize(t.size());
+	vn.resize(v.size());
+
+	for (size_t i = 0; i < t.size(); i++)
+	{
+		vertex_3 v0 = t[i].vertex[1] - t[i].vertex[0];
+		vertex_3 v1 = t[i].vertex[2] - t[i].vertex[0];
+		fn[i] = v0.cross(v1);
+		fn[i].normalize();
+
+		vn[t[i].vertex[0].index] = vn[t[i].vertex[0].index] + fn[i];
+		vn[t[i].vertex[1].index] = vn[t[i].vertex[1].index] + fn[i];
+		vn[t[i].vertex[2].index] = vn[t[i].vertex[2].index] + fn[i];
+	}
+
+	for (size_t i = 0; i < vn.size(); i++)
+		vn[i].normalize();
+}
+
 
 void get_isosurface(const string equation, 
 	const float grid_max, 
@@ -133,10 +196,6 @@ void get_isosurface(const string equation,
 	const unsigned short int max_iterations,
 	const float threshold)
 {
-	read_triangles_from_binary_stereo_lithography_file(sphere_tris, "sphere.stl");
-	get_vertices_and_normals_from_triangles(sphere_tris, sphere_face_normals, sphere_vertices, sphere_vertex_normals);
-
-
 	const float grid_min = -grid_max;
 
 	const bool make_border = true;
@@ -172,15 +231,9 @@ void get_isosurface(const string equation,
 		for (size_t y = 0; y < res; y++, Z.y += step_size)
 		{
 			if (true == make_border && (x == 0 || y == 0 || z == 0 || x == res - 1 || y == res - 1 || z == res - 1))
-				xyplane0[x * res + y] = border_value; // 0;
+				xyplane0[x * res + y] = border_value;
 			else
 				xyplane0[x * res + y] = eqparser.iterate(points, Z, max_iterations, threshold);
-
-			//if (xyplane0[x * res + y] > threshold)
-			//	xyplane0[x * res + y] = 0;
-			//else
-			//	xyplane0[x * res + y] = threshold + 1;
-
 		}
 	}
 
@@ -206,14 +259,9 @@ void get_isosurface(const string equation,
 				vector<vector_4> points;
 
 				if (true == make_border && (x == 0 || y == 0 || z == 0 || x == res - 1 || y == res - 1 || z == res - 1))
-					xyplane1[x * res + y] = border_value; // 0;
+					xyplane1[x * res + y] = border_value;
 				else
 					xyplane1[x * res + y] = eqparser.iterate(points, Z, max_iterations, threshold);
-
-				//if (xyplane1[x * res + y] > threshold)
-				//	xyplane1[x * res + y] = 0;
-				//else
-				//	xyplane1[x * res + y] = threshold + 1;
 			}
 		}
 
@@ -249,14 +297,12 @@ void get_isosurface(const string equation,
 
 void get_points(size_t res)
 {
-	mt19937 mt_rand(1234567);
-
 	all_4d_points.clear();
 	pos.clear();
 
-	float x_grid_max = 5;
-	float y_grid_max = 5;
-	float z_grid_max = 5;
+	float x_grid_max = 1.5;
+	float y_grid_max = 1.5;
+	float z_grid_max = 1.5;
 	float x_grid_min = -x_grid_max;
 	float y_grid_min = -y_grid_max;
 	float z_grid_min = -z_grid_max;
@@ -267,19 +313,14 @@ void get_points(size_t res)
 
 	float z_w = 0;
 	quaternion C;
-	C.x = 0.3;
-	C.y = 0.5;
-	C.z = 0.4;
-	C.w = 0.2;
+	C.x = 0.3f;
+	C.y = 0.5f;
+	C.z = 0.4f;
+	C.w = 0.2f;
 	unsigned short int max_iterations = 8;
 	float threshold = 4;
 
-	//string equation_string = "Z = inverse(sinh(Z)) + C * inverse(sinh(Z))";
-	//string equation_string = "Z = exp(Z^2) + C";
-	//string equation_string = "Z = C * (inverse(sinh(Z)) * cosh(Z))";
-	
-	string equation_string = "Z = Z*Z + C";
-	
+	string equation_string = "Z = sin(Z) + C*sin(Z)";
 	string error_string;
 	quaternion_julia_set_equation_parser eqparser;
 	if (false == eqparser.setup(equation_string, error_string, C))
@@ -288,15 +329,13 @@ void get_points(size_t res)
 		return;
 	}
 	
-	get_isosurface(equation_string, x_grid_max, 300, z_w, C, max_iterations, threshold);
+	get_isosurface(equation_string, x_grid_max, 100, z_w, C, max_iterations, threshold);
 
 	const float x_step_size = (x_grid_max - x_grid_min) / (x_res - 1);
 	const float y_step_size = (y_grid_max - y_grid_min) / (y_res - 1);
 	const float z_step_size = (z_grid_max - z_grid_min) / (z_res - 1);
 
 	size_t z = 0;
-
-//	grid_vertices.clear();
 
 	quaternion Z(x_grid_min, y_grid_min, z_grid_min, z_w);
 
@@ -307,19 +346,11 @@ void get_points(size_t res)
 		for (size_t y = 0; y < y_res; y++, Z.y += y_step_size)
 		{
 			vector<vector_4> points;
-			vertex_3 vertex = vertices[mt_rand() % vertices.size()];
 
-			quaternion temp_Z;
-			temp_Z.x = vertex.x * 1.5;
-			temp_Z.y = vertex.y * 1.5;
-			temp_Z.z = vertex.z * 1.5;
-			temp_Z.w = 1.5 * z_w;
+			float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
-			float length = eqparser.iterate(points, temp_Z, max_iterations, threshold);
-
-			if (length > threshold)
+			if (length < threshold)
 			{
-				if(all_4d_points.size() < 2)
 				all_4d_points.push_back(points);
 			}
 		}
@@ -340,19 +371,10 @@ void get_points(size_t res)
 			{
 				vector<vector_4> points;
 
-				vertex_3 vertex = vertices[mt_rand() % vertices.size()];
+				float length = eqparser.iterate(points, Z, max_iterations, threshold);
 
-				quaternion temp_Z;
-				temp_Z.x = vertex.x * 1.5;
-				temp_Z.y = vertex.y * 1.5;
-				temp_Z.z = vertex.z * 1.5;
-				temp_Z.w = 1.5 * z_w;
-
-				float length = eqparser.iterate(points, temp_Z, max_iterations, threshold);
-
-				if (length > threshold)
+				if (length < threshold)
 				{
-					if (all_4d_points.size() < 2)
 					all_4d_points.push_back(points);
 				}
 			}
@@ -363,8 +385,7 @@ void get_points(size_t res)
 	{
 		vector<vector_4> p;
 
-		//for (float t = 0; t <= 0.2f; t += 0.01f)
-		for (float t = 0; t <= 0.85f; t += 0.01f)
+		for (float t = 0; t <= 0.2f; t += 0.001f)
 		{
 			vector_4 v = getBezierPoint(all_4d_points[i], t);
 			p.push_back(v);
@@ -377,11 +398,11 @@ void get_points(size_t res)
 
 
 // TODO: fix camera bug where portrait mode crashes.
-void take_screenshot(size_t num_cams_wide, size_t res, const char *filename, const bool reverse_rows = false)
+void take_screenshot(size_t num_cams_wide, const char *filename, const bool reverse_rows = false)
 {
 	screenshot_mode = true;
 
-	get_points(res);
+	get_points(50);
 
 	// Set up Targa TGA image data.
 	unsigned char  idlength = 0;
@@ -416,7 +437,7 @@ void take_screenshot(size_t num_cams_wide, size_t res, const char *filename, con
 	draw_control_list = false;
 
 	float temp_outline_width = outline_width;
-	outline_width = 6;
+	outline_width = 12;
 
 	vector<unsigned char> fbpixels(3*win_x*win_y);
 
@@ -487,7 +508,7 @@ void take_screenshot(size_t num_cams_wide, size_t res, const char *filename, con
 
 	out.write(reinterpret_cast<char *>(&pixel_data[0]), num_bytes);
 
-	get_points(point_res);
+	get_points(10);
 }
 
 void idle_func(void)
@@ -555,7 +576,7 @@ void init_opengl(const int &width, const int &height)
 
 	main_camera.Set(0, 0, camera_w, camera_fov, win_x, win_y, camera_near, camera_far);
 
-	get_points(point_res);
+	get_points(10);
 
 }
 
@@ -670,9 +691,6 @@ void display_func(void)
 		render_string(10, start + 4*break_size, GLUT_BITMAP_HELVETICA_10, string("L: Take screenshot"));
 
 
-
-
-
 		glPopMatrix();
 		glMatrixMode(GL_PROJECTION);
 		glPopMatrix();
@@ -695,10 +713,7 @@ void display_func(void)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if(draw_mesh)
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mesh_solid);
-	else
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mesh_transparent);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mesh_transparent);
 
 	glBegin(GL_TRIANGLES);
 
@@ -717,29 +732,6 @@ void display_func(void)
 	}
 
 	glEnd();
-
-
-
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, sphere_transparent);
-
-	glBegin(GL_TRIANGLES);
-
-	for (size_t i = 0; i < sphere_tris.size(); i++)
-	{
-		size_t v_index0 = sphere_tris[i].vertex[0].index;
-		size_t v_index1 = sphere_tris[i].vertex[1].index;
-		size_t v_index2 = sphere_tris[i].vertex[2].index;
-
-		glNormal3f(sphere_vertex_normals[v_index0].x, sphere_vertex_normals[v_index0].y, sphere_vertex_normals[v_index0].z);
-		glVertex3f(sphere_vertices[v_index0].x, sphere_vertices[v_index0].y, sphere_vertices[v_index0].z);
-		glNormal3f(sphere_vertex_normals[v_index1].x, sphere_vertex_normals[v_index1].y, sphere_vertex_normals[v_index1].z);
-		glVertex3f(sphere_vertices[v_index1].x, sphere_vertices[v_index1].y, sphere_vertices[v_index1].z);
-		glNormal3f(sphere_vertex_normals[v_index2].x, sphere_vertex_normals[v_index2].y, sphere_vertex_normals[v_index2].z);
-		glVertex3f(sphere_vertices[v_index2].x, sphere_vertices[v_index2].y, sphere_vertices[v_index2].z);
-	}
-
-	glEnd();
-
 
 	glDisable(GL_BLEND);
 	glDisable(GL_ALPHA);
@@ -761,11 +753,6 @@ void keyboard_func(unsigned char key, int x, int y)
 		draw_mesh = !draw_mesh;
 		break;
 	}
-	case 'u':
-	{
-		draw_curves = !draw_curves;
-		break;
-	}
 	case 'h':
 		{
 			draw_outline = !draw_outline;
@@ -781,14 +768,9 @@ void keyboard_func(unsigned char key, int x, int y)
 			draw_control_list = !draw_control_list;
 			break;
 		}
-	case 'n':
-	{
-		take_screenshot(8, point_res, "screenshot.tga");
-		break;
-	}
-	case 'm':
+	case 'l':
 		{
-			take_screenshot(8, 50, "screenshot.tga");
+			take_screenshot(8, "screenshot.tga");
 			break;
 		}
 
@@ -997,7 +979,7 @@ void draw_objects(bool disable_colouring)
 
 
 
-	if (false == disable_colouring)
+	if(false == disable_colouring)
 	{
 		glEnable(GL_LIGHTING);
 		glEnable(GL_LIGHT0);
@@ -1013,7 +995,7 @@ void draw_objects(bool disable_colouring)
 		glDisable(GL_LIGHTING);
 	}
 
-	static const float rad_to_deg = 180.0f / static_cast<float>(pi);
+	static const float rad_to_deg = 180.0f/static_cast<float>(pi);
 
 	glPushMatrix();
 
@@ -1021,94 +1003,58 @@ void draw_objects(bool disable_colouring)
 
 
 
-	//for (size_t i = 0; i < grid_vertices.size(); i++)
-	//{
-	//	glPushMatrix();
-	//	glTranslatef(grid_vertices[i].x, grid_vertices[i].y, grid_vertices[i].z);
-	//	glutSolidSphere(0.025, 16, 16);
-	//	glPopMatrix();
-	//}
 
 
 
-	if (draw_curves)
+
+
+	if (false == disable_colouring)
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
+
+	for (size_t i = 0; i < pos.size(); i++)
 	{
-		if (false == disable_colouring)
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, orange);
-
-		for (size_t i = 0; i < pos.size(); i++)
+		for (size_t j = 0; j < pos[i].size() - 1; j++)
 		{
-			for (size_t j = 0; j < pos[i].size() - 1; j++)
-			{
-				double t = j / static_cast<double>(pos[i].size() - 1);
+			double t = j / static_cast<double>(pos[i].size() - 1);
 
-				RGB rgb = HSBtoRGB(static_cast<unsigned short>(300.f * t), 75, 100);
+			RGB rgb = HSBtoRGB(static_cast<unsigned short>(300.f * t), 75, 100);
 
-				float colour[] = { rgb.r / 255.0f, rgb.g / 255.0f, rgb.b / 255.0f, 1.0f };
+			float colour[] = { rgb.r / 255.0f, rgb.g / 255.0f, rgb.b / 255.0f, 1.0f};
 
-				glMaterialfv(GL_FRONT, GL_DIFFUSE, colour);
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, colour);
 
-				vector_4 line = pos[i][j + 1] - pos[i][j];
+			vector_4 line = pos[i][j + 1] - pos[i][j];
+			
+			glPushMatrix();
+			glTranslatef(static_cast<float>(pos[i][j].x), static_cast<float>(pos[i][j].y), static_cast<float>(pos[i][j].z));
 
-				glPushMatrix();
-				glTranslatef(static_cast<float>(pos[i][j].x), static_cast<float>(pos[i][j].y), static_cast<float>(pos[i][j].z));
+			float line_len = static_cast<float>(line.length());
+			line.normalize();
+			
+			float yaw = 0.0f;
 
-				float line_len = static_cast<float>(line.length());
-				line.normalize();
+			if (fabsf(static_cast<float>(line.x)) < 0.00001f && fabsf(static_cast<float>(line.z)) < 0.00001f)
+				yaw = 0.0f;
+			else
+				yaw = atan2f(static_cast<float>(line.x), static_cast<float>(line.z));
 
-				float yaw = 0.0f;
+			float pitch = -atan2f(static_cast<float>(line.y), static_cast<float>(sqrt(line.x*line.x + line.z*line.z)));
 
-				if (fabsf(static_cast<float>(line.x)) < 0.00001f && fabsf(static_cast<float>(line.z)) < 0.00001f)
-					yaw = 0.0f;
-				else
-					yaw = atan2f(static_cast<float>(line.x), static_cast<float>(line.z));
+			glRotatef(yaw*rad_to_deg, 0.0f, 1.0f, 0.0f);
+			glRotatef(pitch*rad_to_deg, 1.0f, 0.0f, 0.0f);
 
-				float pitch = -atan2f(static_cast<float>(line.y), static_cast<float>(sqrt(line.x * line.x + line.z * line.z)));
 
-				glRotatef(yaw * rad_to_deg, 0.0f, 1.0f, 0.0f);
-				glRotatef(pitch * rad_to_deg, 1.0f, 0.0f, 0.0f);
+			if(j == 0)
+				glutSolidSphere(0.005 * 1.5, 16, 16);
+			else if(j < pos[i].size() - 2)
+				gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
+			else
+				glutSolidCone(0.005*4, 0.005*8, 4, 2);
 
-				if (j == 0)
-					glutSolidSphere(0.005 * 1.5, 16, 16);
-
-				if (j < pos[i].size() - 2)
-					gluCylinder(glu_obj, 0.005, 0.005, line_len, 20, 2);
-				else
-					glutSolidCone(0.005 * 4, 0.005 * 8, 20, 20);
-
-				glPopMatrix();
-			}
-
+			glPopMatrix();
 		}
 
 	}
-
-
-	if (draw_mesh)
-	{
-		glMaterialfv(GL_FRONT, GL_DIFFUSE, mesh_solid);
-
-		glBegin(GL_TRIANGLES);
-
-		for (size_t i = 0; i < tris.size(); i++)
-		{
-			size_t v_index0 = tris[i].vertex[0].index;
-			size_t v_index1 = tris[i].vertex[1].index;
-			size_t v_index2 = tris[i].vertex[2].index;
-
-			glNormal3f(vertex_normals[v_index0].x, vertex_normals[v_index0].y, vertex_normals[v_index0].z);
-			glVertex3f(vertices[v_index0].x, vertices[v_index0].y, vertices[v_index0].z);
-			glNormal3f(vertex_normals[v_index1].x, vertex_normals[v_index1].y, vertex_normals[v_index1].z);
-			glVertex3f(vertices[v_index1].x, vertices[v_index1].y, vertices[v_index1].z);
-			glNormal3f(vertex_normals[v_index2].x, vertex_normals[v_index2].y, vertex_normals[v_index2].z);
-			glVertex3f(vertices[v_index2].x, vertices[v_index2].y, vertices[v_index2].z);
-		}
-
-		glEnd();
-	}
-
-
-
 
 
 
